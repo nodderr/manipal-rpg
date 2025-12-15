@@ -39,7 +39,6 @@ RULES:
 
 CRITICAL WRITING STYLE:
 - KEEP IT SHORT. Max 2-3 sentences.
-- Use Manipal slang.
 
 OUTPUT FORMAT (JSON ONLY):
 {{
