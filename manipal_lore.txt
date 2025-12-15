@@ -103,25 +103,20 @@
 3. Sessional 1: The first wave of attacks. Stress levels rising.
 4. Sessional 2: The mid-game difficulty spike.
 5. End Semester Exams: The apocalypse. The world goes silent.
-6. The Monsoon Onset: Map floods. Travel becomes difficult.
 7. Summer Break: The server is empty. Ghost town mode.
 8. Holi Celebration: Potion wars. Everyone gets 'Colored' status.
 9. Dandiya Night: Rhythm-based mini-game event.
 10. Hostel Day: Free food event. Massive HP restoration.
 11. The Placement Season: High anxiety event. Suits required.
 12. Utsav: Inter-collegiate battles. High competitive spirit.
-13. The Weekend Rush: Bus stations are crowded. Fast travel disabled.
 14. Cricket Match Screening: SP becomes a war zone of cheering.
 15. The Convocation: The end-game cutscene.
-16. Teacher's Day: Professors are less aggressive for 24 hours.
-17. Bandh (Strike): Shops closed. Resource scarcity.
 18. Freshers' Party: New players spawn. Chaos ensues.
 19. Farewell: Emotional damage.
 20. DJ Night: Sonic damage high. Sanity low.
 21. Room Inspection: Stealth mission. Hide contraband immediately.
 22. Water Shortage: Survival mode activated.
 23. Internet Outage: Mass panic event.
-24. midnight Canteen Opening: Rare merchant spawns.
 25. Chicken Pox Outbreak: Quarantine zone established.
 26. Department Trip: Group quest. High morale.
 27. Blood Donation Camp: Trade HP for Karma points.
