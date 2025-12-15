@@ -4,108 +4,117 @@
     <meta charset="UTF-8">
     <title>Manipal RPG</title>
     <style>
-    /* 1. Base Font Scaling */
-    body { 
-        background-color: #1a1a1a; 
-        color: #00ff00; 
-        font-family: 'Courier New', monospace; 
-        padding: 30px; /* Scaled from 20px */
-    }
+        body { 
+            background-color: #1a1a1a; 
+            color: #00ff00; 
+            font-family: 'Courier New', monospace; 
+            padding: 20px; 
+            display: flex;
+            gap: 20px;
+        }
 
-    /* 2. Container Scaling (800px -> 1200px) */
-    .game-container { 
-        max-width: 1200px; 
-        margin: 0 auto; 
-        border: 3px solid #00ff00; /* Thicker border */
-        padding: 30px; /* Scaled from 20px */
-    }
-    
-    /* 3. Stats Bar Text Size */
-    .stats-bar { 
-        display: flex; 
-        justify-content: space-between; 
-        border-bottom: 2px solid #00ff44; 
-        padding-bottom: 15px; 
-        margin-bottom: 30px; 
-        font-size: 1.5rem; /* Larger stats text */
-        font-weight: bold;
-    }
-    
-    /* 4. Story Text (1.2rem -> 1.8rem) */
-    .story-text { 
-        font-size: 1.8rem; 
-        min-height: 225px; /* Scaled from 150px to prevent layout jump */
-        margin-bottom: 30px; 
-        line-height: 1.6; /* Better readability at large sizes */
-    }
-    
-    .choices { 
-        display: grid; 
-        grid-template-columns: 1fr 1fr; 
-        gap: 20px; /* Bigger gaps between buttons */
-    }
-    
-    /* 5. BIG Buttons */
-    button {
-        background: black; 
-        color: #00ff00; 
-        border: 2px solid #00ff00; 
-        padding: 25px; /* Much larger click area */
-        font-family: inherit; 
-        cursor: pointer; 
-        font-size: 1.5rem; /* Bigger button text */
-        transition: 0.2s;
-    }
-    button:hover { 
-        background: #00ff00; 
-        color: black; 
-    }
-    .watermark{
-    position: fixed;
-    bottom: 10px;
-    left: 0;
-    width: 100%;
-    text-align: center;
-    color: #397b5a;
-    font-size: 0.9rem;
-    font-family: 'Courier New', Courier, monospace; 
-    pointer-events: none;
-    z-index: 1000;
+        /* Main Game Area */
+        .game-container { 
+            flex: 3;
+            max-width: 900px; 
+            border: 3px solid #00ff00; 
+            padding: 30px; 
+        }
 
-}
-</style>
+        /* Right Sidebar for Runes */
+        .sidebar {
+            flex: 1;
+            border: 3px solid #00ff44;
+            padding: 20px;
+            height: fit-content;
+        }
+
+        .stats-bar { 
+            display: flex; 
+            justify-content: space-between; 
+            border-bottom: 2px solid #00ff44; 
+            padding-bottom: 15px; 
+            margin-bottom: 30px; 
+            font-size: 1.2rem; 
+            font-weight: bold;
+        }
+        
+        .story-text { 
+            font-size: 1.6rem; 
+            min-height: 225px; 
+            margin-bottom: 30px; 
+            line-height: 1.6; 
+        }
+        
+        .choices { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 20px; 
+        }
+        
+        button {
+            background: black; 
+            color: #00ff00; 
+            border: 2px solid #00ff00; 
+            padding: 20px; 
+            font-family: inherit; 
+            cursor: pointer; 
+            font-size: 1.3rem; 
+            transition: 0.2s;
+        }
+        button:hover { 
+            background: #00ff00; 
+            color: black; 
+        }
+        button:disabled {
+            border-color: #555;
+            color: #555;
+            cursor: not-allowed;
+        }
+
+        .rune-item {
+            border: 1px solid #eebb00;
+            color: #eebb00;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+        h3 { margin-top: 0; color: #eebb00; }
+    </style>
 </head>
 <body>
 
 <div class="game-container">
     <div class="stats-bar">
         <span id="turn">Turn: {{ stats.turn }}/50</span>
-        <span id="hp">HP: {{ stats.hp }}/100</span>
+        <span id="hp">HP: {{ stats.hp }}/{{ stats.max_hp }}</span>
         <span id="gold">Gold: {{ stats.gold }}</span>
         <span id="attack">ATK: {{ stats.attack }}</span>
     </div>
 
     <div class="story-text" id="story">
-        You stand at the entrance of the Infinite Dungeon. The air is cold. Two paths lie before you.
+        Welcome to Manipal. The humidity is rising. Choose your path.
     </div>
 
     <div class="choices" id="choices">
-        <button onclick="makeChoice('Go Left')">Go Left</button>
-        <button onclick="makeChoice('Go Right')">Go Right</button>
-        <button onclick="makeChoice('Search for Loot')">Search for Loot</button>
-        <button onclick="makeChoice('Check Inventory')">Check Inventory</button>
+        <button onclick="makeChoice('Start Game')">Start Game</button>
+    </div>
+</div>
+
+<div class="sidebar">
+    <h3>RUNES COLLECTED</h3>
+    <div id="rune-list">
+        {% for rune in stats.runes %}
+            <div class="rune-item">{{ rune }}</div>
+        {% endfor %}
     </div>
 </div>
 
 <script>
     async function makeChoice(text) {
         const buttons = document.querySelectorAll('button');
-        buttons.forEach(b => {
-            b.disabled = true;
-            b.style.opacity = "0.5";
-            b.style.cursor = "not-allowed";
-        });
-        document.getElementById('story').innerText = "The Dungeon Master is thinking...";
+        buttons.forEach(b => b.disabled = true);
+        document.getElementById('story').innerText = "Thinking...";
 
         try {
             const response = await fetch('/action', {
@@ -113,48 +122,52 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ choice: text })
             });
-
+            
             const data = await response.json();
-
+            
             document.getElementById('story').innerText = data.message;
-            document.getElementById('hp').innerText = "HP: " + data.stats.hp + "/100";
-            document.getElementById('gold').innerText = "Gold: " + data.stats.gold;
-            document.getElementById('attack').innerText = "ATK: " + data.stats.attack;
-            document.getElementById('turn').innerText = "Turn: " + data.stats.turn + "/50";
+
+            if(data.stats) {
+                try { document.getElementById('hp').innerText = "HP: " + data.stats.hp + "/" + data.stats.max_hp; } catch(e) {}
+                try { document.getElementById('gold').innerText = "Gold: " + data.stats.gold; } catch(e) {}
+                try { document.getElementById('attack').innerText = "ATK: " + data.stats.attack; } catch(e) {}
+                try { document.getElementById('turn').innerText = "Turn: " + data.stats.turn + "/50"; } catch(e) {}
+                
+                // Update Runes Sidebar
+                const runeList = document.getElementById('rune-list');
+                runeList.innerHTML = "";
+                data.stats.runes.forEach(rune => {
+                    const rDiv = document.createElement('div');
+                    rDiv.className = "rune-item";
+                    rDiv.innerText = rune;
+                    runeList.appendChild(rDiv);
+                });
+            }
 
             const choicesDiv = document.getElementById('choices');
             choicesDiv.innerHTML = "";
 
-            if (data.stats.is_game_over) {
-                let endMessage = "";
-                let color = "";
-
-                if (data.stats.hp <= 0) {
-                    endMessage = "💀 YOU DIED 💀";
-                    color = "#ff4444";
-                } else {
-                    endMessage = "🏆 VICTORY! YOU SURVIVED! 🏆";
-                    color = "#00ff00";
-                }
+            if (data.stats.is_game_over || data.stats.hp <= 0) {
+                let endMessage = data.stats.hp <= 0 ? "💀 WASTED 💀" : "🏆 GRADUATED! 🏆";
+                let color = data.stats.hp <= 0 ? "#ff4444" : "#00ff00";
 
                 const endTitle = document.createElement('h2');
                 endTitle.innerText = endMessage;
                 endTitle.style.color = color;
                 endTitle.style.textAlign = "center";
-                endTitle.style.gridColumn = "span 2";
-                endTitle.style.marginTop = "20px";
+                endTitle.style.gridColumn = "span 2"; 
                 choicesDiv.appendChild(endTitle);
 
                 const restartBtn = document.createElement('button');
-                restartBtn.innerText = "PLAY AGAIN";
+                restartBtn.innerText = "RESTART SEMESTER";
                 restartBtn.style.gridColumn = "span 2";
-                restartBtn.style.background = color;
-                restartBtn.style.color = "black";
-                restartBtn.style.fontWeight = "bold";
-                restartBtn.onclick = () => window.location.reload();
+                restartBtn.style.borderColor = color;
+                restartBtn.style.color = color;
+                restartBtn.onclick = () => window.location.reload(); 
                 choicesDiv.appendChild(restartBtn);
+
             } else {
-                if (data.options) {
+                if(data.options) {
                     data.options.forEach(option => {
                         const btn = document.createElement('button');
                         btn.innerText = option;
@@ -163,17 +176,13 @@
                     });
                 }
             }
+
         } catch (error) {
-            console.error("Error:", error);
-            document.getElementById('story').innerText = "Communication with the Dungeon Master failed. Please try again.";
-            buttons.forEach(b => {
-                b.disabled = false;
-                b.style.opacity = "1";
-                b.style.cursor = "pointer";
-            });
+            console.error(error);
+            document.getElementById('story').innerText = "Connection Failed. Please Refresh.";
         }
     }
 </script>
-    <div class="watermark">Made by Noddy :)</div>
+
 </body>
 </html>
