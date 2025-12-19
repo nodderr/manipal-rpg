@@ -26,14 +26,14 @@
 23. Coin Circle: [+150 Gold] It's literally named Coin Circle. You find coins.
 
 [FRIEND ZONES - HIGH PRIORITY]
-30. D406 (Noddy's Room): [+800 Gold] [+50 HP] [+20 ATK] Chaotic roommate energy.
-31. E106 (Aryan's Room): [+800 Gold] [+50 HP] [+20 ATK] Balanced zone.
-32. A409 (Tushar's Room): [+800 Gold] [+50 HP] [+20 ATK] Strategic discussion hub.
+30. D406 (Noddy, Avinash, Mukund's Room): [+800 Gold] [+50 HP] [+20 ATK] Chaotic roommate energy.
+31. E106 (Aryan, Aman, Ansh's Room): [+800 Gold] [+50 HP] [+20 ATK] Balanced zone.
+32. A409 (Satvik, Tushar's Room): [+800 Gold] [+50 HP] [+20 ATK] Strategic discussion hub.
 33. Ideal Residency (Shaivi's Home): [+800 Gold] [+50 HP] [+20 ATK] Calm residential zone.
 34. Mandavi Paradise (Mathur's Home): [+800 Gold] [+50 HP] [+20 ATK] Peaceful but isolated.
 35. Woodwinds (Shivansh's Home): [+800 Gold] [+50 HP] [+20 ATK] Premium apartment buffs.
 36. E503 (Mihika's Room): [+800 Gold] [+50 HP] [+20 ATK] High aesthetic value.
-37. B601 (Ramya's Room): [+800 Gold] [+50 HP] [+20 ATK] Cooperative living bonuses.
+37. B601 (Ramya, Kota's Room): [+800 Gold] [+50 HP] [+20 ATK] Cooperative living bonuses.
 38. Babas Point: [+20 HP] Scenic, quiet place. Restores sanity.
 39. Petrol Pump: [+20 HP] Late-night tea zone. Restores stamina.
 
