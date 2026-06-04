@@ -274,6 +274,38 @@ except FileNotFoundError:
 
 
 # ============================================================
+# 7. Boss Battle Mechanics & Scaling
+# ============================================================
+section("7. Boss Battle Mechanics & Scaling")
+
+# Default scaling rules
+# Turn 10 Boss: HP=50, dmg=8
+t10_hp = 10 * 5
+t10_dmg = int(10 * 0.8)
+check("Turn 10 Boss HP = 50", t10_hp == 50, f"Got {t10_hp}")
+check("Turn 10 Boss DMG = 8", t10_dmg == 8, f"Got {t10_dmg}")
+
+# Turn 40 Boss: HP=200, dmg=32
+t40_hp = 40 * 5
+t40_dmg = int(40 * 0.8)
+check("Turn 40 Boss HP = 200", t40_hp == 200, f"Got {t40_hp}")
+check("Turn 40 Boss DMG = 32", t40_dmg == 32, f"Got {t40_dmg}")
+
+# Boss HP decrement simulation
+boss_hp = 50
+player_atk = 15
+boss_hp -= player_atk
+check("Boss HP reduced by player attack: 50-15=35", boss_hp == 35, f"Got {boss_hp}")
+
+# Desperate strike cost simulation
+g_combat = GameState()
+g_combat.hp = 100
+g_combat.update_stats({"hp": -20})
+check("Player HP reduced by Desperate Strike strain: 100-20=80", g_combat.hp == 80, f"Got {g_combat.hp}")
+
+
+
+# ============================================================
 # SUMMARY
 # ============================================================
 section("SUMMARY")

@@ -40,6 +40,7 @@ def get_groq_client():
 
 # --- DATA LOADING ---
 ALL_ITEMS = []
+ALL_ENEMIES = []
 try:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     LORE_PATH = os.path.join(BASE_DIR, 'manipal_lore.txt')
@@ -52,9 +53,32 @@ try:
             if line and (line[0].isdigit() or line.startswith("-")):
                 clean_item = re.sub(r'^\d+\.\s*', '', line)
                 ALL_ITEMS.append(clean_item)
+    if "[ENEMIES & BOSSES]" in CAMPUS_DATA:
+        enemy_section = CAMPUS_DATA.split("[ENEMIES & BOSSES]")[1].split("[ITEMS & LOOT]")[0]
+        for line in enemy_section.split('\n'):
+            line = line.strip()
+            if line and (line[0].isdigit() or line.startswith("-")):
+                clean_enemy = re.sub(r'^\d+\.\s*', '', line)
+                name = clean_enemy.split(":")[0].strip()
+                if "Anil Rana" not in name and "FINAL BOSS" not in name:
+                    ALL_ENEMIES.append(name)
 except FileNotFoundError:
     CAMPUS_DATA = "Location: A generic university campus."
     ALL_ITEMS = ["Potion [+10 HP]"]
+
+if not ALL_ENEMIES:
+    ALL_ENEMIES = [
+        "The Auto Rickshaw Driver",
+        "The Hostel Warden",
+        "The Internal Assessment (IA)",
+        "The Strict Invigilator",
+        "The Stray Dog Pack",
+        "The 8AM Lecture",
+        "The Backlog",
+        "The Assignment Deadline",
+        "The Library Guard",
+        "The Senior Student"
+    ]
 
 FRIEND_ZONES_LIST = [
     "D406 (Noddy's Room) - Chaotic roommate energy",
@@ -161,6 +185,18 @@ def get_random_items(count=3):
     if not ALL_ITEMS: return ""
     selected = random.sample(ALL_ITEMS, min(len(ALL_ITEMS), count))
     return ", ".join(selected)
+
+def get_combat_options(game):
+    options = [
+        f"⚔️ Basic Attack [Damage: {game.attack}]",
+        "🛡️ Defend & Heal [+25 HP]",
+        f"⚡ Desperate Strike [-20 HP] [Damage: {int(game.attack * 2.5)}]"
+    ]
+    if game.gold >= 150:
+        options.append("💰 Bribe [-150 Gold] [Damage: 50]")
+    else:
+        options.append("📣 Distract & Taunt [+5 Gold] [Damage: 15]")
+    return options
 
 def load_game_from_session(data):
     game = GameState()
@@ -287,6 +323,196 @@ def action():
 
     game = load_game_from_session(data)
     user_choice = request.json.get('choice')
+
+    # --- 1. COMBAT LOOP INTERCEPTION ---
+    active_boss = session.get('active_boss')
+    if active_boss:
+        boss_name = active_boss["name"]
+        boss_hp = active_boss["hp"]
+        boss_max_hp = active_boss["max_hp"]
+        boss_damage = active_boss["damage"]
+
+        player_dmg = 0
+        player_hp_change = 0
+        player_gold_change = 0
+        action_desc = ""
+
+        if "Basic Attack" in user_choice:
+            player_dmg = game.attack
+            action_desc = f"You perform a Basic Attack, dealing {player_dmg} damage to {boss_name}."
+        elif "Defend & Heal" in user_choice:
+            player_hp_change = 25
+            action_desc = f"You play defensively and focus on recovery, restoring {player_hp_change} HP."
+        elif "Desperate Strike" in user_choice:
+            player_hp_change = -20
+            player_dmg = int(game.attack * 2.5)
+            action_desc = f"You unleash a Desperate Strike, dealing {player_dmg} damage to {boss_name} but taking 20 strain damage!"
+        elif "Bribe" in user_choice:
+            player_gold_change = -150
+            player_dmg = 50
+            action_desc = f"You slide {boss_name} 150 Gold, dealing 50 damage through distraction!"
+        elif "Distract & Taunt" in user_choice:
+            player_gold_change = 5
+            player_dmg = 15
+            action_desc = f"You mock {boss_name}, dealing 15 damage and snatching 5 Gold from their desk!"
+
+        boss_hp -= player_dmg
+        if boss_hp < 0: boss_hp = 0
+
+        game.update_stats({"hp": player_hp_change, "gold": player_gold_change})
+
+        if boss_hp <= 0:
+            session.pop('active_boss', None)
+            game.turn += 1
+            if game.turn > game.max_turns:
+                game.is_game_over = True
+
+            reward_gold = 500
+            reward_atk = 20
+            game.update_stats({"gold": reward_gold, "attack": reward_atk})
+
+            victory_context = f"""
+            Victory! The player has defeated the boss {boss_name}.
+            Choice chosen: {user_choice}
+            Action description: {action_desc}
+            Reward received: +{reward_gold} Gold, +{reward_atk} ATK
+            Next explore options are set. Narrative a short, celebratory wrap up of the battle.
+            """
+            
+            short_history = session.get('short_history', [])
+            try:
+                ai_data = call_ai(short_history, victory_context)
+                story_msg = ai_data["story"]
+                next_options = ai_data["options"]
+            except Exception as e:
+                story_msg = f"🏆 VICTORY! You defeated {boss_name}! (+500 Gold, +20 ATK)"
+                next_options = ["Continue Semester", "Explore Campus", "Rest in Hostel", "Go to Library"]
+
+            session['short_history'] = []
+            session['current_options'] = next_options
+            session['game_state'] = game.to_dict()
+
+            return jsonify({
+                "message": story_msg,
+                "stats": game.to_dict(),
+                "options": next_options
+            })
+
+        boss_counter_dmg = boss_damage
+        if "Defend & Heal" in user_choice:
+            boss_counter_dmg = int(boss_damage * 0.4)
+            
+        game.update_stats({"hp": -boss_counter_dmg})
+
+        if game.hp <= 0:
+            game.is_game_over = True
+            session.pop('active_boss', None)
+            defeat_context = f"""
+            Defeat! The player was killed in combat by {boss_name}.
+            Choice chosen: {user_choice}
+            Action description: {action_desc}
+            Final fatal hit from boss: -{boss_counter_dmg} HP
+            Generate a short, dramatic/humorous game-over description of how the player failed their semester.
+            """
+            short_history = session.get('short_history', [])
+            try:
+                ai_data = call_ai(short_history, defeat_context)
+                story_msg = ai_data["story"]
+            except Exception as e:
+                story_msg = f"💀 WASTED. You were defeated by {boss_name}."
+
+            session['current_options'] = []
+            session['game_state'] = game.to_dict()
+            return jsonify({
+                "message": story_msg,
+                "stats": game.to_dict(),
+                "options": []
+            })
+
+        active_boss["hp"] = boss_hp
+        session['active_boss'] = active_boss
+
+        combat_context = f"""
+        COMBAT ROUND IN PROGRESS.
+        Player is fighting: {boss_name} (HP: {boss_hp}/{boss_max_hp})
+        Player action: {action_desc}
+        Boss response: Attacks back dealing {boss_counter_dmg} HP damage.
+        Current Player HP: {game.hp}/{game.max_hp}
+        Narrate this combat round in a single short paragraph. Do not finish the fight yet.
+        """
+
+        short_history = session.get('short_history', [])
+        combat_options = get_combat_options(game)
+        try:
+            ai_data = call_ai(short_history, combat_context)
+            story_msg = ai_data["story"]
+        except Exception as e:
+            story_msg = f"⚔️ Combat continues! {action_desc} {boss_name} strikes back for {boss_counter_dmg} damage!"
+
+        session['current_options'] = combat_options
+        session['game_state'] = game.to_dict()
+
+        return jsonify({
+            "message": story_msg,
+            "stats": game.to_dict(),
+            "options": combat_options,
+            "boss": {
+                "name": boss_name,
+                "hp": boss_hp,
+                "max_hp": boss_max_hp
+            }
+        })
+
+    # --- 2. TRIGGER BOSS FIGHT ---
+    if game.turn in [10, 20, 30, 40, 50] and not session.get('active_boss') and not session.get('awaiting_rune'):
+        if game.turn == 50:
+            boss_name = "Anil Rana, The Director (FINAL BOSS)"
+            boss_max_hp = 450
+            boss_dmg = 45
+        else:
+            boss_name = random.choice(ALL_ENEMIES) if ALL_ENEMIES else "The Strict Invigilator"
+            boss_max_hp = game.turn * 5
+            boss_dmg = int(game.turn * 0.8)
+            
+        active_boss = {
+            "name": boss_name,
+            "hp": boss_max_hp,
+            "max_hp": boss_max_hp,
+            "damage": boss_dmg
+        }
+        session['active_boss'] = active_boss
+        
+        appear_context = f"""
+        BOSS ENCOUNTER TRIGGERED!
+        The legendary boss/enemy appeared: {boss_name} (Max HP: {boss_max_hp}, Damage: {boss_dmg})
+        Player is a {game.major} major.
+        Describe their epic, humorous, or terrifying arrival at the campus location.
+        Prompt the player that battle has begun.
+        """
+        
+        short_history = session.get('short_history', [])
+        combat_options = get_combat_options(game)
+        try:
+            ai_data = call_ai(short_history, appear_context)
+            story_msg = ai_data["story"]
+        except Exception as e:
+            story_msg = f"⚠️ WARNING: A wild {boss_name} appears! Battle begins!"
+            
+        session['current_options'] = combat_options
+        session['game_state'] = game.to_dict()
+        
+        return jsonify({
+            "message": story_msg,
+            "stats": game.to_dict(),
+            "options": combat_options,
+            "boss": {
+                "name": boss_name,
+                "hp": boss_max_hp,
+                "max_hp": boss_max_hp
+            }
+        })
+
+    # --- 3. STANDARD TURN EXECUTION ---
     button_stats = parse_tags(user_choice)
 
     # --- RUNE SELECTION ---

@@ -206,6 +206,45 @@
             border: 1px solid #eebb0055;
             color: #eebb00;
         }
+
+        /* --- Boss Container Styles --- */
+        #boss-container {
+            border: 3px solid #ff4444;
+            padding: 15px;
+            margin-bottom: 25px;
+            background: black;
+            box-shadow: 0 0 10px rgba(255, 68, 68, 0.4);
+        }
+        #boss-name {
+            color: #ff4444;
+            margin: 0 0 10px 0;
+            text-align: center;
+            font-size: 1.3rem;
+            letter-spacing: 1px;
+        }
+        .boss-hp-track {
+            border: 2px solid #ff4444;
+            height: 24px;
+            position: relative;
+            background: #220000;
+        }
+        #boss-hp-bar {
+            background: #ff4444;
+            height: 100%;
+            width: 100%;
+            transition: width 0.3s ease-out;
+        }
+        #boss-hp-text {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 0.95rem;
+            text-shadow: 1px 1px 2px #000;
+        }
     </style>
 </head>
 <body>
@@ -269,6 +308,15 @@
         <span id="provider-indicator">GEMINI</span>
     </div>
 
+    <!-- Boss HP Bar (hidden by default) -->
+    <div id="boss-container" style="display: none;">
+        <h3 id="boss-name">BOSS FIGHT: THE STRICT INVIGILATOR</h3>
+        <div class="boss-hp-track">
+            <div id="boss-hp-bar"></div>
+            <span id="boss-hp-text">50/50 HP</span>
+        </div>
+    </div>
+
     <div class="story-text" id="story">
         Welcome to Manipal. The humidity is rising. Choose your Oracle.
     </div>
@@ -314,6 +362,8 @@
         }
 
         updateStats(data.stats);
+
+        try { document.getElementById('boss-container').style.display = 'none'; } catch(e) {}
 
         document.getElementById('story').innerText = 'Welcome to Manipal. The humidity is rising. Choose your path.';
         const choicesDiv = document.getElementById('choices');
@@ -365,6 +415,18 @@
             document.getElementById('story').innerText = data.message;
 
             if(data.stats) updateStats(data.stats);
+
+            // Handle Boss HP bar rendering
+            const bossContainer = document.getElementById('boss-container');
+            if (data.boss && bossContainer) {
+                document.getElementById('boss-name').innerText = "⚔️ BOSS BATTLE: " + data.boss.name + " ⚔️";
+                const hpPercent = Math.max(0, Math.min(100, (data.boss.hp / data.boss.max_hp) * 100));
+                document.getElementById('boss-hp-bar').style.width = hpPercent + "%";
+                document.getElementById('boss-hp-text').innerText = data.boss.hp + "/" + data.boss.max_hp + " HP";
+                bossContainer.style.display = 'block';
+            } else if (bossContainer) {
+                bossContainer.style.display = 'none';
+            }
 
             const choicesDiv = document.getElementById('choices');
             choicesDiv.innerHTML = "";
