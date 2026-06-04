@@ -252,6 +252,18 @@
 <!-- Provider Selection Overlay -->
 <div id="provider-screen">
     <h2>MANIPAL RPG</h2>
+
+    <!-- Resume Container (hidden by default) -->
+    <div id="resume-container" style="display: none; border: 2px solid #eebb00; padding: 15px; margin-bottom: 20px; background: #221c00; max-width: 500px; width: 90%; text-align: center;">
+        <p style="color: #eebb00; margin: 0 0 10px 0; font-weight: bold; font-size: 1.1rem;">ACTIVE SEMESTER DETECTED</p>
+        <div id="resume-details" style="font-size: 0.9rem; color: #fff; margin-bottom: 15px; line-height: 1.4;">
+            Turn: 1/50 | Major: CS | HP: 100/100 | Gold: 500
+        </div>
+        <button class="provider-btn" onclick="resumeGame()" style="border-color: #eebb00; color: #eebb00; width: 100%; padding: 15px; min-width: unset;">
+            RESUME SEMESTER
+        </button>
+        <div style="margin-top: 10px; font-size: 0.8rem; color: #888;">or start a new semester below:</div>
+    </div>
     
     <!-- Step 1: Select Provider -->
     <div id="step-provider" style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
@@ -333,6 +345,108 @@
 
 <script>
     let selectedProvider = null;
+    let shortHistory = [];
+
+    window.onload = function() {
+        checkSaveState();
+    };
+
+    function checkSaveState() {
+        const saved = localStorage.getItem('manipal_rpg_save');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                if (data && data.stats && !data.stats.is_game_over && data.stats.hp > 0) {
+                    const stats = data.stats;
+                    document.getElementById('resume-details').innerText = 
+                        `Turn: ${stats.turn}/50 | Major: ${stats.major} | HP: ${stats.hp}/${stats.max_hp} | Gold: ${stats.gold}`;
+                    document.getElementById('resume-container').style.display = 'block';
+                }
+            } catch (e) {
+                console.error("Error parsing save state:", e);
+                localStorage.removeItem('manipal_rpg_save');
+            }
+        }
+    }
+
+    async function resumeGame() {
+        const saved = localStorage.getItem('manipal_rpg_save');
+        if (!saved) return;
+
+        try {
+            const data = JSON.parse(saved);
+            
+            const response = await fetch('/resume', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+
+            const res = await response.json();
+            if (res.status === 'success') {
+                document.getElementById('provider-screen').style.display = 'none';
+
+                selectedProvider = data.provider;
+                const providerInd = document.getElementById('provider-indicator');
+                providerInd.textContent = selectedProvider === 'groq' ? 'GROQ ⚡' : 'GEMINI';
+                providerInd.className = selectedProvider === 'groq' ? 'groq' : '';
+
+                const majorInd = document.getElementById('major-indicator');
+                if (majorInd) {
+                    majorInd.textContent = data.stats.major;
+                }
+
+                shortHistory = data.short_history || [];
+
+                updateStats(data.stats);
+                document.getElementById('story').innerText = data.message;
+
+                const bossContainer = document.getElementById('boss-container');
+                if (data.boss && bossContainer) {
+                    document.getElementById('boss-name').innerText = "⚔️ BOSS BATTLE: " + data.boss.name + " ⚔️";
+                    const hpPercent = Math.max(0, Math.min(100, (data.boss.hp / data.boss.max_hp) * 100));
+                    document.getElementById('boss-hp-bar').style.width = hpPercent + "%";
+                    document.getElementById('boss-hp-text').innerText = data.boss.hp + "/" + data.boss.max_hp + " HP";
+                    bossContainer.style.display = 'block';
+                } else if (bossContainer) {
+                    bossContainer.style.display = 'none';
+                }
+
+                const choicesDiv = document.getElementById('choices');
+                choicesDiv.innerHTML = "";
+                if (data.options) {
+                    data.options.forEach(option => {
+                        const btn = document.createElement('button');
+                        btn.innerText = option;
+                        btn.onclick = () => makeChoice(option);
+                        choicesDiv.appendChild(btn);
+                    });
+                }
+            }
+        } catch (e) {
+            console.error("Error resuming game:", e);
+            alert("Failed to resume semester. Starting fresh.");
+            localStorage.removeItem('manipal_rpg_save');
+            window.location.reload();
+        }
+    }
+
+    function saveGame(stats, message, options, provider, boss, awaiting_rune) {
+        if (stats.is_game_over || stats.hp <= 0) {
+            localStorage.removeItem('manipal_rpg_save');
+            return;
+        }
+        const saveState = {
+            stats: stats,
+            message: message,
+            options: options,
+            provider: provider,
+            boss: boss,
+            awaiting_rune: awaiting_rune,
+            short_history: shortHistory
+        };
+        localStorage.setItem('manipal_rpg_save', JSON.stringify(saveState));
+    }
 
     function selectProvider(provider) {
         selectedProvider = provider;
@@ -351,7 +465,6 @@
 
         const data = await response.json();
 
-        // Update provider and major indicators
         const providerInd = document.getElementById('provider-indicator');
         providerInd.textContent = selectedProvider === 'groq' ? 'GROQ ⚡' : 'GEMINI';
         providerInd.className = selectedProvider === 'groq' ? 'groq' : '';
@@ -365,7 +478,13 @@
 
         try { document.getElementById('boss-container').style.display = 'none'; } catch(e) {}
 
-        document.getElementById('story').innerText = 'Welcome to Manipal. The humidity is rising. Choose your path.';
+        const welcomeMsg = 'Welcome to Manipal. The humidity is rising. Choose your path.';
+        const startOptions = ['Start Game'];
+        document.getElementById('story').innerText = welcomeMsg;
+        
+        shortHistory = [];
+        saveGame(data.stats, welcomeMsg, startOptions, selectedProvider, null, false);
+
         const choicesDiv = document.getElementById('choices');
         choicesDiv.innerHTML = '';
         const startBtn = document.createElement('button');
@@ -399,6 +518,14 @@
     }
 
     async function makeChoice(text) {
+        // Capture last context before updating stats
+        const currentHp = document.getElementById('hp').innerText.split(' ')[1];
+        const currentGold = document.getElementById('gold').innerText.split(' ')[1];
+        const currentAtk = document.getElementById('attack').innerText.split(' ')[1];
+        const currentTurn = document.getElementById('turn').innerText.split(' ')[1].split('/')[0];
+        const currentMajor = document.getElementById('major-indicator').innerText;
+        const lastTurnContext = `Current Turn: ${currentTurn}\nHP: ${currentHp}\nGold: ${currentGold}\nAttack: ${currentAtk}\nMajor: ${currentMajor}\nChoice: ${text}`;
+
         const buttons = document.querySelectorAll('button');
         buttons.forEach(b => b.disabled = true);
         document.getElementById('story').innerText = "Thinking...";
@@ -416,6 +543,13 @@
 
             if(data.stats) updateStats(data.stats);
 
+            // Update sliding history
+            shortHistory.push({role: "user", parts: [lastTurnContext]});
+            shortHistory.push({role: "model", parts: [data.message]});
+            if (shortHistory.length > 6) {
+                shortHistory = shortHistory.slice(-6);
+            }
+
             // Handle Boss HP bar rendering
             const bossContainer = document.getElementById('boss-container');
             if (data.boss && bossContainer) {
@@ -432,6 +566,7 @@
             choicesDiv.innerHTML = "";
 
             if (data.stats && (data.stats.is_game_over || data.stats.hp <= 0)) {
+                localStorage.removeItem('manipal_rpg_save');
                 let endMessage = data.stats.hp <= 0 ? "💀 WASTED 💀" : "🏆 GRADUATED! 🏆";
                 let color = data.stats.hp <= 0 ? "#ff4444" : "#00ff00";
 
@@ -451,6 +586,8 @@
                 choicesDiv.appendChild(restartBtn);
 
             } else {
+                const isAwaitingRune = data.awaiting_rune || (data.stats && data.stats.turn % 10 === 9 && !data.boss);
+                saveGame(data.stats, data.message, data.options, selectedProvider, data.boss, isAwaitingRune);
                 if(data.options) {
                     data.options.forEach(option => {
                         const btn = document.createElement('button');

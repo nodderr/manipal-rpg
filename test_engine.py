@@ -312,6 +312,82 @@ check("Player HP reduced by Desperate Strike strain: 100-20=80", g_combat.hp == 
 
 
 # ============================================================
+# 8. Front-End Session Recovery (Auto-Save) & /resume route
+# ============================================================
+section("8. Front-End Session Recovery & /resume Route")
+
+try:
+    from app import app
+    app.config['TESTING'] = True
+    client = app.test_client()
+
+    # 8.1 Test that loading without stats returns 400
+    res = client.post('/resume', json={})
+    check("Resume with empty payload returns 400", res.status_code == 400)
+
+    # 8.2 Test /resume successfully restores session values
+    save_payload = {
+        "stats": {
+            "turn": 15,
+            "hp": 95,
+            "max_hp": 110,
+            "gold": 350,
+            "attack": 25,
+            "major": "BioMedical",
+            "runes": ["Rune of Strength"],
+            "is_game_over": False
+        },
+        "message": "Resume message test",
+        "options": ["Choice A", "Choice B"],
+        "provider": "gemini",
+        "awaiting_rune": True,
+        "boss": {
+            "name": "The Strict Invigilator",
+            "hp": 80,
+            "max_hp": 100,
+            "damage": 12
+        },
+        "short_history": [{"role": "user", "parts": ["test context"]}]
+    }
+
+    with client.session_transaction() as sess:
+        sess.clear()
+
+    res = client.post('/resume', json=save_payload)
+    check("Resume with valid payload returns 200/success", res.status_code == 200)
+    
+    res_data = json.loads(res.data)
+    check("Response status is success", res_data.get("status") == "success")
+
+    # verify the Flask session was populated
+    with client:
+        client.post('/resume', json=save_payload)
+        from flask import session as flask_session
+        check("Flask session provider restored", flask_session.get('provider') == 'gemini')
+        check("Flask session major restored", flask_session.get('major') == 'BioMedical')
+        check("Flask session current_options restored", flask_session.get('current_options') == ["Choice A", "Choice B"])
+        check("Flask session awaiting_rune restored", flask_session.get('awaiting_rune') is True)
+        check("Flask session short_history restored", len(flask_session.get('short_history', [])) == 1)
+        check("Flask session game_state restored with correct stats", flask_session.get('game_state', {}).get('turn') == 15)
+        check("Flask session active_boss restored", flask_session.get('active_boss', {}).get('name') == "The Strict Invigilator")
+
+    # 8.3 Repeat for app_groq /resume
+    from app_groq import app as app_groq
+    app_groq.config['TESTING'] = True
+    client_groq = app_groq.test_client()
+
+    with client_groq:
+        res = client_groq.post('/resume', json=save_payload)
+        check("Groq app resume returns 200", res.status_code == 200)
+        from flask import session as flask_session_groq
+        check("Groq Flask session provider is forced to groq", flask_session_groq.get('provider') == 'groq')
+        check("Groq Flask session active_boss restored", flask_session_groq.get('active_boss', {}).get('hp') == 80)
+
+except Exception as e:
+    check("Resume route tests passed without exception", False, str(e))
+
+
+# ============================================================
 # SUMMARY
 # ============================================================
 section("SUMMARY")

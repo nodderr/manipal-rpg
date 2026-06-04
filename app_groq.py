@@ -255,6 +255,29 @@ def start():
         "major": major
     })
 
+
+@app.route('/resume', methods=['POST'])
+def resume():
+    """Restore session variables from client-side auto-save backup (Groq-only app)."""
+    data = request.json
+    if not data or 'stats' not in data:
+        return jsonify({"error": "Invalid resume data"}), 400
+
+    session['provider'] = 'groq'
+    session['major'] = data.get('stats', {}).get('major', 'Computer Science')
+    session['current_options'] = data.get('options', [])
+    session['awaiting_rune'] = data.get('awaiting_rune', False)
+    session['short_history'] = data.get('short_history', [])
+    session['game_state'] = data.get('stats')
+
+    if data.get('boss'):
+        session['active_boss'] = data.get('boss')
+    else:
+        session.pop('active_boss', None)
+
+    return jsonify({"status": "success"})
+
+
 @app.route('/action', methods=['POST'])
 def action():
     data = session.get('game_state')
@@ -349,7 +372,8 @@ def action():
             return jsonify({
                 "message": story_msg,
                 "stats": game.to_dict(),
-                "options": next_options
+                "options": next_options,
+                "awaiting_rune": session.get('awaiting_rune', False)
             })
 
         boss_counter_dmg = boss_damage
@@ -444,7 +468,8 @@ def action():
                 "name": boss_name,
                 "hp": boss_hp,
                 "max_hp": boss_max_hp
-            }
+            },
+            "awaiting_rune": session.get('awaiting_rune', False)
         })
 
     # --- 2. TRIGGER BOSS FIGHT ---
@@ -508,7 +533,8 @@ def action():
                 "name": boss_name,
                 "hp": boss_max_hp,
                 "max_hp": boss_max_hp
-            }
+            },
+            "awaiting_rune": session.get('awaiting_rune', False)
         })
 
     # --- 3. STANDARD TURN EXECUTION ---
@@ -529,7 +555,8 @@ def action():
         return jsonify({
             "message": bridge_story,
             "stats": game.to_dict(),
-            "options": next_options
+            "options": next_options,
+            "awaiting_rune": session.get('awaiting_rune', False)
         })
 
     # --- CHECK GOLD AFFORDABILITY ---
@@ -539,7 +566,8 @@ def action():
         return jsonify({
             "message": f"🚫 You check your wallet... only {game.gold} Gold. You need {abs(gold_cost)} Gold!",
             "stats": game.to_dict(),
-            "options": old_options
+            "options": old_options,
+            "awaiting_rune": session.get('awaiting_rune', False)
         })
 
     # --- RUNE TRIGGER (Every 10 Turns) ---
@@ -552,7 +580,8 @@ def action():
         return jsonify({
             "message": special_message,
             "stats": game.to_dict(),
-            "options": rune_options
+            "options": rune_options,
+            "awaiting_rune": session.get('awaiting_rune', False)
         })
 
     # --- APPLY BUTTON STATS (player's explicit choice) ---
@@ -637,7 +666,8 @@ def action():
         return jsonify({
             "message": ai_data["story"],
             "stats": game.to_dict(),
-            "options": ai_data["options"]
+            "options": ai_data["options"],
+            "awaiting_rune": session.get('awaiting_rune', False)
         })
 
     except Exception as e:
@@ -646,7 +676,8 @@ def action():
         return jsonify({
             "message": error_msg,
             "stats": game.to_dict(),
-            "options": session.get('current_options', [])
+            "options": session.get('current_options', []),
+            "awaiting_rune": session.get('awaiting_rune', False)
         })
 
 if __name__ == '__main__':
