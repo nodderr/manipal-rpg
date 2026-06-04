@@ -278,18 +278,24 @@ except FileNotFoundError:
 # ============================================================
 section("7. Boss Battle Mechanics & Scaling")
 
-# Default scaling rules
-# Turn 10 Boss: HP=50, dmg=8
-t10_hp = 10 * 5
-t10_dmg = int(10 * 0.8)
-check("Turn 10 Boss HP = 50", t10_hp == 50, f"Got {t10_hp}")
-check("Turn 10 Boss DMG = 8", t10_dmg == 8, f"Got {t10_dmg}")
+# Default scaling rules (Player ATK is e.g. 15)
+# Turn 10 Boss with 15 ATK: HP = int(10 * 12 + 15 * 2.5) = 120 + 37 = 157
+# Turn 10 Boss DMG: int(10 * 1.5) = 15
+t10_hp = int(10 * 12 + 15 * 2.5)
+t10_dmg = int(10 * 1.5)
+check("Turn 10 Boss HP = 157 (for 15 player ATK)", t10_hp == 157, f"Got {t10_hp}")
+check("Turn 10 Boss DMG = 15", t10_dmg == 15, f"Got {t10_dmg}")
 
-# Turn 40 Boss: HP=200, dmg=32
-t40_hp = 40 * 5
-t40_dmg = int(40 * 0.8)
-check("Turn 40 Boss HP = 200", t40_hp == 200, f"Got {t40_hp}")
-check("Turn 40 Boss DMG = 32", t40_dmg == 32, f"Got {t40_dmg}")
+# Turn 10 Boss with 110 ATK: HP = int(10 * 12 + 110 * 2.5) = 120 + 275 = 395
+t10_high_hp = int(10 * 12 + 110 * 2.5)
+check("Turn 10 Boss HP = 395 (for 110 player ATK)", t10_high_hp == 395, f"Got {t10_high_hp}")
+
+# Turn 40 Boss with 50 ATK: HP = int(40 * 12 + 50 * 2.5) = 480 + 125 = 605
+# Turn 40 Boss DMG: int(40 * 1.5) = 60
+t40_hp = int(40 * 12 + 50 * 2.5)
+t40_dmg = int(40 * 1.5)
+check("Turn 40 Boss HP = 605 (for 50 player ATK)", t40_hp == 605, f"Got {t40_hp}")
+check("Turn 40 Boss DMG = 60", t40_dmg == 60, f"Got {t40_dmg}")
 
 # Boss HP decrement simulation
 boss_hp = 50

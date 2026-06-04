@@ -451,12 +451,12 @@ def action():
     if game.turn in [10, 20, 30, 40, 50] and not session.get('active_boss') and not session.get('awaiting_rune'):
         if game.turn == 50:
             boss_name = "Anil Rana, The Director (FINAL BOSS)"
-            boss_max_hp = 450
-            boss_dmg = 45
+            boss_max_hp = int(50 * 12 + game.attack * 3.5)
+            boss_dmg = 75
         else:
             boss_name = random.choice(ALL_ENEMIES) if ALL_ENEMIES else "The Strict Invigilator"
-            boss_max_hp = game.turn * 5
-            boss_dmg = int(game.turn * 0.8)
+            boss_max_hp = int(game.turn * 12 + game.attack * 2.5)
+            boss_dmg = int(game.turn * 1.5)
             
         active_boss = {
             "name": boss_name,
