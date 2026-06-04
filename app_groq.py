@@ -3,7 +3,6 @@ import json
 import re
 import random
 from flask import Flask, render_template, request, jsonify, session
-import google.generativeai as genai
 from groq import Groq
 from dotenv import load_dotenv
 from engine import GameState
@@ -12,16 +11,19 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = "SUPER_SECRET_KEY"
+
+# Using standard client-side signed cookies for sessions to support Vercel serverless deployment
 app.config["SESSION_PERMANENT"] = True
 
-# --- AI PROVIDER CONFIGURATION ---
-# Gemini (Google AI Studio) — free, reliable, 1-3s response time
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-
-# Groq — free, ultra-fast (~0.3s), uses Llama models
+# --- GROQ CONFIGURATION ---
+# Get your free API key at: https://console.groq.com
+# Add GROQ_API_KEY to your .env file or Vercel environment variables.
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+# Model options (pick one):
+#   "llama-3.3-70b-versatile"  — Best story quality, 1000 req/day free
+#   "llama3-8b-8192"           — Fastest + highest daily limit (14400 req/day), slightly simpler output
 GROQ_MODEL = "llama-3.3-70b-versatile"
-GEMINI_MODEL = "gemini-3-flash-preview"
 
 # --- DATA LOADING ---
 ALL_ITEMS = []
@@ -41,6 +43,7 @@ except FileNotFoundError:
     CAMPUS_DATA = "Location: A generic university campus."
     ALL_ITEMS = ["Potion [+10 HP]"]
 
+# --- FRIEND ZONES (for narrative overrides) ---
 FRIEND_ZONES_LIST = [
     "D406 (Noddy's Room) - Chaotic roommate energy",
     "E106 (Aryan's Room) - Balanced zone",
@@ -55,6 +58,9 @@ FRIEND_ZONES_LIST = [
     "Petrol Pump - Late-night tea zone"
 ]
 
+# --- LOCATION STATS LOOKUP TABLE ---
+# Single source of truth for all location/friend-zone rewards.
+# The AI never touches these — the server applies them directly.
 LOCATION_STATS = {
     "Tiger Circle":         {"hp": 0,  "gold": 250,  "attack": 0},
     "Student Plaza":        {"hp": 0,  "gold": 300,  "attack": 0},
@@ -104,24 +110,21 @@ RULES:
 1. **OPTIONS MUST HAVE TAGS**: You MUST include tags in square brackets for any stat change.
    - CORRECT: "Eat Puff [+20 HP] [-20 Gold]"
    - WRONG: "Eat Puff"
-2. **STORY VISUALS**: You may include stat tags in the story as flavour (e.g. "You find a coin. [+250 Gold]"),
+2. **STORY VISUALS**: You may include stat tags in the story text as flavour (e.g. "You find a coin. [+250 Gold]"),
    but these are DISPLAY ONLY. The server manages all actual stat changes.
 
-OUTPUT FORMAT (JSON ONLY, NO MARKDOWN WRAPPING):
+OUTPUT FORMAT (JSON ONLY, NO MARKDOWN):
 {{
     "story": "Description...",
     "options": ["Opt 1 [+X HP]", "Opt 2", "Opt 3", "Opt 4"]
 }}
 """
 
-MAX_HISTORY_MESSAGES = 6
+MAX_HISTORY_MESSAGES = 6  # 3 user + 3 assistant turns (sliding window)
 
-
-# ================================================================
-# HELPERS
-# ================================================================
 
 def parse_tags(text):
+    """Parse stat tags from button/rune text. Story tags are NEVER applied."""
     changes = {"hp": 0, "gold": 0, "attack": 0}
     matches = re.findall(r'\[\s*([+\-]?\s*\d+)\s*(HP|Gold|ATK|Attack)\s*\]', text, re.IGNORECASE)
     for val_str, type_ in matches:
@@ -136,6 +139,7 @@ def parse_tags(text):
     return changes
 
 def get_location_stats(location_name):
+    """Fuzzy-match a location string to LOCATION_STATS. Returns zero stats if not found."""
     for key in LOCATION_STATS:
         if key.lower() in location_name.lower():
             return dict(LOCATION_STATS[key])
@@ -157,89 +161,15 @@ def load_game_from_session(data):
     return game
 
 
-# ================================================================
-# AI PROVIDER DISPATCH
-# Calls either Gemini or Groq based on session['provider'].
-# Both accept the same sliding-window history format and return
-# a (story: str, options: list) tuple.
-# ================================================================
-
-def call_gemini(short_history, turn_context):
-    """Call Gemini with sliding window history. Returns parsed ai_data dict."""
-    gemini_history = []
-    for msg in short_history:
-        role = "user" if msg["role"] == "user" else "model"
-        gemini_history.append({"role": role, "parts": [msg["parts"][0]]})
-
-    model = genai.GenerativeModel(
-        model_name=GEMINI_MODEL,
-        system_instruction=SYSTEM_PROMPT
-    )
-    chat = model.start_chat(history=gemini_history)
-    response = chat.send_message(
-        turn_context,
-        generation_config=genai.GenerationConfig(response_mime_type="application/json")
-    )
-    return json.loads(response.text)
-
-
-def call_groq(short_history, turn_context):
-    """Call Groq with sliding window history. Returns parsed ai_data dict."""
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    for msg in short_history:
-        groq_role = "assistant" if msg["role"] == "model" else "user"
-        messages.append({"role": groq_role, "content": msg["parts"][0]})
-    messages.append({"role": "user", "content": turn_context})
-
-    response = groq_client.chat.completions.create(
-        model=GROQ_MODEL,
-        messages=messages,
-        response_format={"type": "json_object"},
-        temperature=0.8,
-        max_tokens=1024,
-    )
-    return json.loads(response.choices[0].message.content)
-
-
-def call_ai(short_history, turn_context):
-    """Dispatch to the AI provider stored in the session."""
-    provider = session.get('provider', 'gemini')
-    if provider == 'groq':
-        return call_groq(short_history, turn_context)
-    return call_gemini(short_history, turn_context)
-
-
-# ================================================================
-# ROUTES
-# ================================================================
-
 @app.route('/')
 def home():
-    """Landing page — player chooses their AI provider before the game starts."""
-    return render_template('index.html')
-
-
-@app.route('/start', methods=['POST'])
-def start():
-    """Initialize a new game with the chosen AI provider."""
-    provider = request.json.get('provider', 'gemini')
-    if provider not in ('gemini', 'groq'):
-        provider = 'gemini'
-
     new_game = GameState()
     new_game.gold = 500
-
-    session['provider'] = provider
     session['current_options'] = ["Start Adventure", "Check Inventory", "Rest", "Explore"]
     session['awaiting_rune'] = False
     session['short_history'] = []
     session['game_state'] = new_game.to_dict()
-
-    return jsonify({
-        "stats": new_game.to_dict(),
-        "provider": provider
-    })
-
+    return render_template('index.html', stats=new_game.to_dict())
 
 @app.route('/action', methods=['POST'])
 def action():
@@ -250,7 +180,7 @@ def action():
     user_choice = request.json.get('choice')
     button_stats = parse_tags(user_choice)
 
-    # --- RUNE SELECTION ---
+    # --- RUNE SELECTION LOGIC ---
     if session.get('awaiting_rune'):
         game.runes.append(user_choice)
         game.update_stats(button_stats)
@@ -259,32 +189,42 @@ def action():
 
         bridge_story = f"You absorb the power of the {user_choice}! You feel invincible."
         next_options = ["Continue Adventure", "Check Stats", "Roar", "Look for Enemies"]
+
         session['current_options'] = next_options
         session['game_state'] = game.to_dict()
-        return jsonify({"message": bridge_story, "stats": game.to_dict(), "options": next_options})
+        return jsonify({
+            "message": bridge_story,
+            "stats": game.to_dict(),
+            "options": next_options
+        })
 
-    # --- AFFORDABILITY CHECK ---
+    # --- CHECK GOLD AFFORDABILITY ---
     gold_cost = button_stats.get('gold', 0)
     if gold_cost < 0 and (game.gold + gold_cost < 0):
+        old_options = session.get('current_options', [])
         return jsonify({
             "message": f"🚫 You check your wallet... only {game.gold} Gold. You need {abs(gold_cost)} Gold!",
             "stats": game.to_dict(),
-            "options": session.get('current_options', [])
+            "options": old_options
         })
 
-    # --- RUNE TRIGGER ---
+    # --- RUNE TRIGGER (Every 10 Turns) ---
     if game.turn % 10 == 9:
         rune_options = random.sample(RUNES_LIST, 2)
         session['awaiting_rune'] = True
         special_message = f"✨ LEVEL {game.turn} REACHED! ✨\nAncient Manipal Runes appear before you. Choose wisely."
         session['current_options'] = rune_options
         session['game_state'] = game.to_dict()
-        return jsonify({"message": special_message, "stats": game.to_dict(), "options": rune_options})
+        return jsonify({
+            "message": special_message,
+            "stats": game.to_dict(),
+            "options": rune_options
+        })
 
-    # --- APPLY BUTTON STATS ---
+    # --- APPLY BUTTON STATS (player's explicit choice) ---
     game.update_stats(button_stats)
 
-    # --- NARRATIVE OVERRIDE: server applies location stats ---
+    # --- NARRATIVE OVERRIDE: Server applies location stats directly ---
     location_bonus = {"hp": 0, "gold": 0, "attack": 0}
     special_instruction = ""
 
@@ -295,7 +235,9 @@ def action():
         if any(v != 0 for v in location_bonus.values()):
             game.update_stats(location_bonus)
 
-    # Build bonus description for AI context
+    # --- STANDARD AI TURN ---
+    suggested_loot = get_random_items(3)
+
     bonus_desc = ""
     if any(v != 0 for v in location_bonus.values()):
         parts = []
@@ -310,24 +252,43 @@ def action():
     Gold: {game.gold}
     Attack: {game.attack}
     Choice: {user_choice}
-    SUGGESTED LOOT: {get_random_items(3)}
+    SUGGESTED LOOT: {suggested_loot}
     {special_instruction}
     {bonus_desc}
     """
 
+    # Build Groq message history from sliding window
     short_history = session.get('short_history', [])
 
-    try:
-        # --- DISPATCH TO CHOSEN AI PROVIDER ---
-        ai_data = call_ai(short_history, turn_context)
+    # Convert sliding window to Groq's message format
+    # Groq uses OpenAI-compatible format: [{"role": "user"/"assistant", "content": "..."}]
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for msg in short_history:
+        # short_history stores {"role": "user"/"model", "parts": ["..."]}
+        # Groq expects {"role": "user"/"assistant", "content": "..."}
+        groq_role = "assistant" if msg["role"] == "model" else "user"
+        messages.append({"role": groq_role, "content": msg["parts"][0]})
+    messages.append({"role": "user", "content": turn_context})
 
-        # Stats are already applied. Story is narration only. Increment turn once.
+    try:
+        response = groq_client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=messages,
+            response_format={"type": "json_object"},  # Groq's JSON mode
+            temperature=0.8,  # Slightly creative for RPG storytelling
+            max_tokens=1024,
+        )
+
+        response_text = response.choices[0].message.content
+        ai_data = json.loads(response_text)
+
+        # Stats already applied above (button + location). Story is narration only.
         game.turn += 1
+
         if game.turn > game.max_turns:
             game.is_game_over = True
 
         # Update sliding window
-        response_text = json.dumps(ai_data)
         short_history.append({"role": "user", "parts": [turn_context]})
         short_history.append({"role": "model", "parts": [response_text]})
         if len(short_history) > MAX_HISTORY_MESSAGES:
@@ -344,14 +305,12 @@ def action():
         })
 
     except Exception as e:
-        provider = session.get('provider', 'gemini')
-        print(f"AI Error ({provider}): {e}")
+        print(f"AI Error: {e}")
         return jsonify({
-            "message": f"Connection Error ({provider.capitalize()}).",
+            "message": "Connection Error (Groq).",
             "stats": game.to_dict(),
             "options": session.get('current_options', [])
         })
-
 
 if __name__ == '__main__':
     app.run(debug=True)
