@@ -388,6 +388,58 @@ except Exception as e:
 
 
 # ============================================================
+# 9. Stats-Driven Dynamic Endings
+# ============================================================
+section("9. Stats-Driven Dynamic Endings")
+
+try:
+    from app import get_ending_classification
+    
+    # 9.1 Placements Legend Ending test (high ATK)
+    g_end1 = GameState()
+    g_end1.attack = 100
+    g_end1.major = "Mechanical"
+    name, desc = get_ending_classification(g_end1)
+    check("High ATK (100) triggers Placements Legend Ending", "Placements Legend" in name)
+
+    # 9.2 Placements Legend Ending test (CS Major)
+    g_end2 = GameState()
+    g_end2.attack = 15
+    g_end2.major = "Computer Science"
+    name, desc = get_ending_classification(g_end2)
+    check("CS Major triggers Placements Legend Ending", "Placements Legend" in name)
+
+    # 9.3 Tiger Circle Chai Tycoon Ending test (high Gold)
+    g_end3 = GameState()
+    g_end3.attack = 15
+    g_end3.gold = 4000
+    g_end3.major = "Mechanical"
+    name, desc = get_ending_classification(g_end3)
+    check("High Gold (4000) triggers Tiger Circle Chai Tycoon Ending", "Tiger Circle Chai Tycoon" in name)
+
+    # 9.4 Dropout Ending test (Chaos/Greed Runes)
+    g_end4 = GameState()
+    g_end4.attack = 15
+    g_end4.gold = 500
+    g_end4.major = "Mechanical"
+    g_end4.runes = ["Rune of Chaos [+200 ATK] [-100 HP]"]
+    name, desc = get_ending_classification(g_end4)
+    check("Rune of Chaos triggers Dropout Ending", "Dropout" in name)
+
+    # 9.5 Safe Average Graduate Ending test (balanced stats)
+    g_end5 = GameState()
+    g_end5.attack = 15
+    g_end5.gold = 500
+    g_end5.major = "Mechanical"
+    g_end5.runes = ["Rune of Vitality [+300 HP]"]
+    name, desc = get_ending_classification(g_end5)
+    check("Balanced stats trigger Safe Average Graduate Ending", "Safe Average Graduate" in name)
+
+except Exception as e:
+    check("Stats-Driven Endings classification tests passed without exception", False, str(e))
+
+
+# ============================================================
 # SUMMARY
 # ============================================================
 section("SUMMARY")

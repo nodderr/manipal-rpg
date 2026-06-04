@@ -198,6 +198,16 @@ def get_combat_options(game):
         options.append("📣 Distract & Taunt [+5 Gold] [Damage: 15]")
     return options
 
+def get_ending_classification(game):
+    if game.attack >= 100 or game.major == "Computer Science":
+        return "Placements Legend Ending (Corporate Overlord)", "The player has extremely high Attack or is a Computer Science major. Narrate how a top tech company recruiter was so impressed by their absolute domination of the semester that they hired them directly as a Placement Deity, coding compilers in their sleep."
+    elif game.gold >= 4000:
+        return "Tiger Circle Chai Tycoon Ending (Startup Unicorn)", "The player has a massive amount of Gold. Narrate how they bought out all the food stalls around Tiger Circle, started a Ghee Roast franchise, and eventually bought MAHE to turn it into a startup incubator."
+    elif any("Chaos" in r or "Greed" in r for r in game.runes):
+        return "Dropout", "The player has gathered chaotic or greedy runes (e.g. Rune of Chaos or Rune of Greed). Narrate how they transcended the academic plane, dropped out, and now live at Babas Point as a mythological legend who fights invigilators in the astral plane."
+    else:
+        return "Safe Average Graduate Ending", "The player completed the semester with balanced stats. Narrate their graduation ceremony, how they got a safe corporate job, and how they will forever miss the late-night canteen talks and the humidity."
+
 def load_game_from_session(data):
     game = GameState()
     game.turn = data['turn']
@@ -389,26 +399,46 @@ def action():
             if game.turn > game.max_turns:
                 game.is_game_over = True
 
-            reward_gold = 500
-            reward_atk = 20
-            game.update_stats({"gold": reward_gold, "attack": reward_atk})
+            is_final_boss = "Anil Rana" in boss_name
 
-            victory_context = f"""
-            Victory! The player has defeated the boss {boss_name}.
-            Choice chosen: {user_choice}
-            Action description: {action_desc}
-            Reward received: +{reward_gold} Gold, +{reward_atk} ATK
-            Next explore options are set. Narrative a short, celebratory wrap up of the battle.
-            """
+            if is_final_boss:
+                ending_type, ending_desc = get_ending_classification(game)
+                victory_context = f"""
+                GAME COMPLETED - GRADUATION VICTORY!
+                The player has defeated the Final Boss: {boss_name}.
+                Academic Major: {game.major}
+                Final Stats - HP: {game.hp}, Gold: {game.gold}, ATK: {game.attack}, Runes: {game.runes}
+                ENDING TYPE TRIGGERED: {ending_type}
+                {ending_desc}
+                Narrate a hilarious, detailed, and satisfying custom ending story wrapping up their 4-year saga at Manipal.
+                Since the game is over, do not include any future game choices.
+                """
+                reward_gold = 0
+                reward_atk = 0
+            else:
+                reward_gold = 500
+                reward_atk = 20
+                game.update_stats({"gold": reward_gold, "attack": reward_atk})
+                victory_context = f"""
+                Victory! The player has defeated the boss {boss_name}.
+                Choice chosen: {user_choice}
+                Action description: {action_desc}
+                Reward received: +{reward_gold} Gold, +{reward_atk} ATK
+                Next explore options are set. Narrative a short, celebratory wrap up of the battle.
+                """
             
             short_history = session.get('short_history', [])
             try:
                 ai_data = call_ai(short_history, victory_context)
                 story_msg = ai_data["story"]
-                next_options = ai_data["options"]
+                next_options = [] if is_final_boss else ai_data["options"]
             except Exception as e:
-                story_msg = f"🏆 VICTORY! You defeated {boss_name}! (+500 Gold, +20 ATK)"
-                next_options = ["Continue Semester", "Explore Campus", "Rest in Hostel", "Go to Library"]
+                if is_final_boss:
+                    story_msg = f"🏆 VICTORY! You defeated {boss_name} and successfully graduated from MAHE!"
+                    next_options = []
+                else:
+                    story_msg = f"🏆 VICTORY! You defeated {boss_name}! (+500 Gold, +20 ATK)"
+                    next_options = ["Continue Semester", "Explore Campus", "Rest in Hostel", "Go to Library"]
 
             session['short_history'] = []
             session['current_options'] = next_options
