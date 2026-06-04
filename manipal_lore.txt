@@ -1,42 +1,42 @@
 *** MANIPAL CAMPUS LORE & WORLD DATA ***
 
 [LOCATIONS]
-1.  Tiger Circle (TC): [+250 Gold] The chaotic center. You find a lost wallet.
-2.  Student Plaza (SP): [+300 Gold] The social hub. You sell some old notes.
+1.  Tiger Circle (TC): The chaotic center of campus. Always busy, full of rickshaws and rushing students.
+2.  Student Plaza (SP): The social hub. Great place to buy, sell, and meet people.
 3.  MIT Food Court 1: The noisy hall of sustenance.
-4.  MIT Food Court 2 (FC2): Quiet dining.
-5.  End Point: [+400 Gold] A scenic park. You find a hidden stash.
-6.  Central Library: Free AC.
-7.  KMC Greens: The romantic PvP zone.
-8.  DeeTee (The Ruins): An underground legend.
-9.  Venugopal Temple: [+200 Gold] You feel blessed and find money in your pocket.
-10. Canara Mall: The capitalist dungeon.
-11. Hostel Block 10: The party fortress.
-12. The Innovation Centre (IC): [+1000 Gold] You win a Hackathon prize.
-13. Marena Complex: Sports arena.
-14. The TAPMI Hill: Treacherous climb.
-15. Academic Block 1 (AB1): Maze of classrooms.
-16. Academic Block 5 (AB5): Towering structure.
-17. Kamath Circle (KC): Legendary tea shops.
-18. Malpe Beach: [+500 Gold] You find a rare shell and sell it.
-19. Kapu Lighthouse: Grants vision.
-20. Inox Manipal: Cinema dungeon.
-21. Dollops: Expensive food.
-22. Pangala: Breakfast shrine.
-23. Coin Circle: [+150 Gold] It's literally named Coin Circle. You find coins.
+4.  MIT Food Court 2 (FC2): Quieter dining area.
+5.  End Point: A scenic park at the edge of campus. Students come here to relax.
+6.  Central Library: Free AC. A sanctuary from the heat.
+7.  KMC Greens: The romantic PvP zone. Couples and rivals alike gather here.
+8.  DeeTee (The Ruins): An underground legend. Mysterious and atmospheric.
+9.  Venugopal Temple: A peaceful temple. Many students visit before exams.
+10. Canara Mall: The capitalist dungeon. Everything costs more than it should.
+11. Hostel Block 10: The party fortress. Loud music at all hours.
+12. The Innovation Centre (IC): Where hackathons and tech events happen. High energy.
+13. Marena Complex: Sports arena. The competitive heart of campus.
+14. The TAPMI Hill: A treacherous climb to a rival institution.
+15. Academic Block 1 (AB1): A maze of classrooms. Easy to get lost.
+16. Academic Block 5 (AB5): A towering structure. Home to many labs.
+17. Kamath Circle (KC): Legendary tea shops. The best chai in Manipal.
+18. Malpe Beach: A gorgeous beach a short ride away. Students go here to decompress.
+19. Kapu Lighthouse: Grants vision of the coast. A beautiful viewpoint.
+20. Inox Manipal: The cinema dungeon. A welcome escape from academic life.
+21. Dollops: Expensive but delicious food.
+22. Pangala: The breakfast shrine. Opens early, fills up fast.
+23. Coin Circle: It's literally named Coin Circle. A small roundabout junction.
 
 [FRIEND ZONES - HIGH PRIORITY]
-30. D406 (Noddy, Avinash, Mukund's Room): [+800 Gold] [+50 HP] [+20 ATK] Chaotic roommate energy.
-31. E106 (Aryan, Aman, Ansh's Room): [+800 Gold] [+50 HP] [+20 ATK] Balanced zone.
-32. A409 (Satvik, Tushar's Room): [+800 Gold] [+50 HP] [+20 ATK] Strategic discussion hub.
-33. Ideal Residency (Shaivi's Home): [+800 Gold] [+50 HP] [+20 ATK] Calm residential zone.
-34. Mandavi Paradise (Mathur's Home): [+800 Gold] [+50 HP] [+20 ATK] Peaceful but isolated.
-35. Woodwinds (Shivansh's Home): [+800 Gold] [+50 HP] [+20 ATK] Premium apartment buffs.
-36. E503 (Mihika's Room): [+800 Gold] [+50 HP] [+20 ATK] High aesthetic value.
-37. B601 (Ramya, Kota's Room): [+800 Gold] [+50 HP] [+20 ATK] Cooperative living bonuses.
-38. C904 (Reva, Anshu, Disha, Adel's Room): [+800 Gold] [+50 HP] [+20 ATK] Cozy group zone.
-39. Babas Point: [+20 HP] Scenic, quiet place. Restores sanity.
-40. Petrol Pump: [+20 HP] Late-night tea zone. Restores stamina.
+30. D406 (Noddy, Avinash, Mukund's Room): Chaotic roommate energy. Always something happening here.
+31. E106 (Aryan, Aman, Ansh's Room): A balanced, welcoming zone. Good vibes.
+32. A409 (Satvik, Tushar's Room): Strategic discussion hub. Plans are made here.
+33. Ideal Residency (Shaivi's Home): A calm residential zone off-campus. Peaceful escape.
+34. Mandavi Paradise (Mathur's Home): Peaceful but isolated. Far from the main campus.
+35. Woodwinds (Shivansh's Home): Premium apartment. Great amenities and atmosphere.
+36. E503 (Mihika's Room): High aesthetic value. Very well decorated and cozy.
+37. B601 (Ramya, Kota's Room): Cooperative living. Everyone helps each other here.
+38. C904 (Reva, Anshu, Disha, Adel's Room): Cozy group zone. Always full of laughter.
+39. Babas Point: A scenic, quiet spot. Perfect for clearing your head.
+40. Petrol Pump: The late-night tea zone. Open when everything else is closed.
 
 [ENEMIES & BOSSES]
 1.  The Auto Rickshaw Driver: Fast, aggressive.

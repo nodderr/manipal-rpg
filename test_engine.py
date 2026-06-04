@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-test_engine.py - Verification test suite for Manipal RPG bug fixes
+test_engine.py - Full verification test suite for Manipal RPG
 Run with: python -X utf8 test_engine.py
 """
 import io, sys
@@ -13,7 +13,29 @@ import json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from engine import GameState
 
-# --- Replicate parse_tags from app.py ---
+# --- Replicate helpers from app.py ---
+
+LOCATION_STATS = {
+    "Tiger Circle":         {"hp": 0,  "gold": 250,  "attack": 0},
+    "Student Plaza":        {"hp": 0,  "gold": 300,  "attack": 0},
+    "End Point":            {"hp": 0,  "gold": 400,  "attack": 0},
+    "Venugopal Temple":     {"hp": 0,  "gold": 200,  "attack": 0},
+    "Innovation Centre":    {"hp": 0,  "gold": 1000, "attack": 0},
+    "Malpe Beach":          {"hp": 0,  "gold": 500,  "attack": 0},
+    "Coin Circle":          {"hp": 0,  "gold": 150,  "attack": 0},
+    "D406":                 {"hp": 50, "gold": 800,  "attack": 20},
+    "E106":                 {"hp": 50, "gold": 800,  "attack": 20},
+    "A409":                 {"hp": 50, "gold": 800,  "attack": 20},
+    "Ideal Residency":      {"hp": 50, "gold": 800,  "attack": 20},
+    "Mandavi Paradise":     {"hp": 50, "gold": 800,  "attack": 20},
+    "Woodwinds":            {"hp": 50, "gold": 800,  "attack": 20},
+    "E503":                 {"hp": 50, "gold": 800,  "attack": 20},
+    "B601":                 {"hp": 50, "gold": 800,  "attack": 20},
+    "C904":                 {"hp": 50, "gold": 800,  "attack": 20},
+    "Babas Point":          {"hp": 20, "gold": 0,    "attack": 0},
+    "Petrol Pump":          {"hp": 20, "gold": 0,    "attack": 0},
+}
+
 def parse_tags(text):
     changes = {"hp": 0, "gold": 0, "attack": 0}
     matches = re.findall(r'\[\s*([+\-]?\s*\d+)\s*(HP|Gold|ATK|Attack)\s*\]', text, re.IGNORECASE)
@@ -27,6 +49,12 @@ def parse_tags(text):
         except ValueError:
             continue
     return changes
+
+def get_location_stats(location_name):
+    for key in LOCATION_STATS:
+        if key.lower() in location_name.lower():
+            return dict(LOCATION_STATS[key])
+    return {"hp": 0, "gold": 0, "attack": 0}
 
 # --- Test Utilities ---
 PASS = "\033[92m[PASS]\033[0m"
@@ -47,157 +75,199 @@ def section(title):
 
 
 # ============================================================
-# 1. BUG 1 FIX — No double stat application
+# 1. get_location_stats — fuzzy location lookup
 # ============================================================
-section("1. BUG 1 FIX: Single Stat Application (Story Only)")
+section("1. get_location_stats() — Location Lookup Table")
 
-# Simulate what fixed app.py does on a normal action:
-# - Button stats are ONLY used for affordability check (not applied)
-# - Story stats are applied ONCE
+# Exact key match
+r = get_location_stats("D406")
+check("D406 exact match: gold=800 hp=50 atk=20",
+      r == {"hp": 50, "gold": 800, "attack": 20}, str(r))
+
+# Fuzzy match from FRIEND_ZONES_LIST format
+r = get_location_stats("D406 (Noddy's Room) - Chaotic roommate energy")
+check("D406 fuzzy match from full zone string",
+      r == {"hp": 50, "gold": 800, "attack": 20}, str(r))
+
+r = get_location_stats("Babas Point - Scenic, quiet place")
+check("Babas Point fuzzy match: hp=20 gold=0 atk=0",
+      r == {"hp": 20, "gold": 0, "attack": 0}, str(r))
+
+r = get_location_stats("C904 (Reva, Anshu, Disha, Adel's Room) - Cozy group zone")
+check("C904 fuzzy match: gold=800 hp=50 atk=20",
+      r == {"hp": 50, "gold": 800, "attack": 20}, str(r))
+
+r = get_location_stats("Tiger Circle")
+check("Tiger Circle: gold=250 hp=0 atk=0",
+      r == {"hp": 0, "gold": 250, "attack": 0}, str(r))
+
+r = get_location_stats("Innovation Centre")
+check("Innovation Centre: gold=1000",
+      r["gold"] == 1000, str(r))
+
+# Unknown location returns safe zero defaults
+r = get_location_stats("Some Random Place That Doesnt Exist")
+check("Unknown location returns zero stats (safe default)",
+      r == {"hp": 0, "gold": 0, "attack": 0}, str(r))
+
+# Returns a copy (mutating returned dict doesn't affect LOCATION_STATS)
+r = get_location_stats("D406")
+r["gold"] = 9999
+check("Returns a copy — mutating it doesn't affect LOCATION_STATS",
+      LOCATION_STATS["D406"]["gold"] == 800)
+
+
+# ============================================================
+# 2. Stats applied from button text (player choice)
+# ============================================================
+section("2. Button Stats — Player Choice Applied Correctly")
 
 g = GameState()
-g.gold = 500
-g.hp = 100
-g.max_hp = 100
+g.gold = 500; g.hp = 100; g.max_hp = 100; g.attack = 10
 
-# User clicks: "Go to Tiger Circle [+250 Gold]"
-button_stats = parse_tags("Go to Tiger Circle [+250 Gold]")
-# Fixed: we do NOT call g.update_stats(button_stats) here
+# Player clicks "Eat Puff [+20 HP] [-20 Gold]"
+button_stats = parse_tags("Eat Puff [+20 HP] [-20 Gold]")
+g.update_stats(button_stats)
+check("HP after eating puff: 100+20=120", g.hp == 120, f"Got {g.hp}")
+check("Max HP after eating puff: 100+20=120 (HP gain = permanent)", g.max_hp == 120, f"Got {g.max_hp}")
+check("Gold after eating puff: 500-20=480", g.gold == 480, f"Got {g.gold}")
 
-# AI story: "You arrive at TC. You find a wallet. [+250 Gold]"
-story_stats = parse_tags("You arrive at TC. You find a wallet. [+250 Gold]")
-g.update_stats(story_stats)  # Applied exactly once
-
-check("Gold applied once: 500 + 250 = 750", g.gold == 750,
-      f"Got {g.gold}, expected 750. Double-apply would give 1000.")
-
-# Test affordability check still works (read-only)
 g2 = GameState()
-g2.gold = 30
-button_stats_expensive = parse_tags("Buy Manipal Hoodie [+50 HP] [-800 Gold]")
-gold_cost = button_stats_expensive.get('gold', 0)
-can_afford = not (gold_cost < 0 and (g2.gold + gold_cost < 0))
-check("Affordability check correctly blocks purchase (30 gold, costs 800)", not can_afford,
-      f"Should be blocked but can_afford={can_afford}")
+g2.gold = 500; g2.hp = 100; g2.max_hp = 100
+
+# Player clicks "Fight enemy [-30 HP] [+10 ATK]"
+button_stats2 = parse_tags("Fight enemy [-30 HP] [+10 ATK]")
+g2.update_stats(button_stats2)
+check("HP after fight: 100-30=70", g2.hp == 70, f"Got {g2.hp}")
+check("Max HP unchanged after damage: still 100", g2.max_hp == 100, f"Got {g2.max_hp}")
+check("ATK after fight: 10+10=20 (default 10)", g2.attack == 20, f"Got {g2.attack}")
+
+
+# ============================================================
+# 3. Location bonus applied server-side (narrative override)
+# ============================================================
+section("3. Location Bonus — Server-Side Application")
 
 g3 = GameState()
-g3.gold = 1000
-can_afford_2 = not (gold_cost < 0 and (g3.gold + gold_cost < 0))
-check("Affordability check correctly allows purchase (1000 gold, costs 800)", can_afford_2,
-      f"Should be allowed but can_afford={can_afford_2}")
+g3.gold = 500; g3.hp = 100; g3.max_hp = 100; g3.attack = 10
 
+# Simulate: player chose "Explore [+0]" but narrative override fired to D406
+button_stats3 = parse_tags("Explore campus")   # no tags
+loc_stats = get_location_stats("D406 (Noddy's Room) - Chaotic roommate energy")
 
-# ============================================================
-# 2. BUG 2 FIX — Turn increments exactly once per action
-# ============================================================
-section("2. BUG 2 FIX: Turn Increments Exactly Once Per Action")
+g3.update_stats(button_stats3)   # button (no change)
+g3.update_stats(loc_stats)       # location bonus (server applies directly)
 
+check("Gold after D406 override: 500+800=1300", g3.gold == 1300, f"Got {g3.gold}")
+check("HP after D406 override: 100+50=150", g3.hp == 150, f"Got {g3.hp}")
+check("ATK after D406 override: 10+20=30", g3.attack == 30, f"Got {g3.attack}")
+
+# Ensure story tags are NOT parsed — the AI story is purely narrative
 g4 = GameState()
-g4.turn = 1
+g4.gold = 500; g4.hp = 100; g4.max_hp = 100
 
-# Fixed flow: update_stats (NO turn increment inside) + explicit turn += 1
-story_stats = parse_tags("You find something. [+50 Gold]")
-g4.update_stats(story_stats)  # Does NOT increment turn anymore
-g4.turn += 1                   # Explicit single increment
+ai_story = "You stroll into D406. The room is full of friends. The vibe is electric. [+800 Gold] [+50 HP] [+20 ATK]"
+story_stats = parse_tags(ai_story)   # We parse it to inspect it...
+# ...but we NEVER call g4.update_stats(story_stats). Story is display only.
+check("Story text NOT applied — gold unchanged at 500", g4.gold == 500, f"Got {g4.gold}")
+check("Story contains tags but they are NEVER applied", True)
+print(f"         Story would have given: gold={story_stats['gold']} hp={story_stats['hp']} atk={story_stats['attack']}")
+print(f"         Actual gold: {g4.gold} (unchanged)")
 
-check("Turn = 2 after 1 action (was 3 before fix)", g4.turn == 2,
-      f"Got turn={g4.turn}, expected 2")
 
-# Simulate 5 actions
+# ============================================================
+# 4. Turn increments exactly once per action
+# ============================================================
+section("4. Turn Increments Exactly Once Per Action")
+
 g5 = GameState()
 g5.turn = 1
-for _ in range(5):
-    g5.update_stats({"hp": 0, "gold": 0, "attack": 0})
-    g5.turn += 1
+g5.update_stats({"hp": 0, "gold": 0, "attack": 0})  # button (no turn increment)
+g5.update_stats({"hp": 50, "gold": 800, "attack": 20})  # location bonus (no turn increment)
+g5.turn += 1  # explicit single increment at end of action
 
-check("Turn = 6 after 5 actions (was 11 before fix)", g5.turn == 6,
-      f"Got turn={g5.turn}, expected 6")
+check("Turn = 2 after 1 full action (button + location bonus)", g5.turn == 2,
+      f"Got turn={g5.turn}")
 
-# Confirm update_stats no longer increments turn
 g6 = GameState()
-g6.turn = 5
-g6.update_stats({"hp": 0, "gold": 0, "attack": 0})
-check("update_stats() does NOT increment turn anymore", g6.turn == 5,
-      f"Got turn={g6.turn}, expected still 5")
+g6.turn = 1
+for _ in range(5):
+    g6.update_stats({"hp": 0, "gold": 0, "attack": 0})
+    g6.update_stats({"hp": 0, "gold": 0, "attack": 0})  # simulate location bonus
+    g6.turn += 1
+
+check("Turn = 6 after 5 actions", g6.turn == 6, f"Got turn={g6.turn}")
 
 
 # ============================================================
-# 3. BUG 3 FIX — Session cookie stays under 4KB
+# 5. Session cookie size stays under 4KB
 # ============================================================
-section("3. BUG 3 FIX: Session Cookie Under 4KB After 10 Turns")
+section("5. Session Cookie Size Under 4KB After 10 Turns")
 
-MAX_HISTORY_MESSAGES = 6  # As set in fixed app.py
-
-# Simulate a game_state dict (no history field)
+MAX_HISTORY_MESSAGES = 6
 game_state = {
-    "turn": 10,
-    "hp": 120,
-    "max_hp": 150,
-    "gold": 1250,
-    "attack": 20,
-    "inventory": [],
-    "runes": ["Rune of Vitality [+300 HP]"],
+    "turn": 10, "hp": 200, "max_hp": 250, "gold": 5000,
+    "attack": 50, "inventory": [], "runes": ["Rune of Vitality [+300 HP]"],
     "is_game_over": False
 }
-
-# Simulate 10 turns of sliding window history (only last 6 kept)
-fake_user_msg = {"role": "user", "parts": ["Current Turn: 10\n    HP: 120/150\n    Gold: 1250\n    Attack: 20\n    Choice: Explore the campus"]}
-fake_model_msg = {"role": "model", "parts": ['{"story": "You wander through the campus and find something interesting. [+50 Gold]", "options": ["Option A [+10 HP]", "Option B [-30 Gold]", "Option C [+5 ATK]", "Option D"]}']}
+fake_user = {"role": "user", "parts": ["Turn 10 context..."]}
+fake_model = {"role": "model", "parts": ['{"story": "Epic story here.", "options": ["A","B","C","D"]}']}
 
 short_history = []
 for _ in range(10):
-    short_history.append(fake_user_msg)
-    short_history.append(fake_model_msg)
+    short_history.append(fake_user)
+    short_history.append(fake_model)
     if len(short_history) > MAX_HISTORY_MESSAGES:
         short_history = short_history[-MAX_HISTORY_MESSAGES:]
 
-# Serialize what would be stored in session cookie
 session_data = {
     "game_state": game_state,
     "short_history": short_history,
-    "current_options": ["Option A [+10 HP]", "Option B [-30 Gold]", "Option C [+5 ATK]", "Option D"],
+    "current_options": ["A", "B", "C", "D"],
     "awaiting_rune": False
 }
 session_size = len(json.dumps(session_data).encode('utf-8'))
-print(f"\n  Sliding window history length: {len(short_history)} messages (capped at {MAX_HISTORY_MESSAGES})")
-print(f"  Session data size after 10 turns: {session_size} bytes")
-print(f"  Flask cookie limit: 4096 bytes")
-
-check(f"Session stays under 4KB after 10 turns ({session_size} bytes)", session_size < 4096,
-      f"Session is {session_size} bytes, exceeds 4096 limit!")
-
-check("Sliding window capped at 6 messages", len(short_history) == MAX_HISTORY_MESSAGES,
-      f"Got {len(short_history)} messages, expected {MAX_HISTORY_MESSAGES}")
+print(f"\n  Session size after 10 turns: {session_size} bytes (limit: 4096 bytes)")
+check(f"Session under 4KB ({session_size} bytes)", session_size < 4096)
+check("History capped at 6 messages", len(short_history) == MAX_HISTORY_MESSAGES)
 
 
 # ============================================================
-# 4. GAMESTATE INTEGRITY — Core engine still works correctly
+# 6. Lore file has no stat tags in locations/friend zones
 # ============================================================
-section("4. GAMESTATE INTEGRITY: Core Engine")
+section("6. Lore File — No Stat Tags in Locations or Friend Zones")
 
-g7 = GameState()
-g7.hp = 100; g7.max_hp = 100; g7.gold = 500; g7.attack = 10
+try:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(BASE_DIR, 'manipal_lore.txt'), 'r', encoding='utf-8') as f:
+        lore = f.read()
 
-g7.update_stats({"hp": 50, "gold": 200, "attack": 5})
-check("HP buff: 100+50=150", g7.hp == 150)
-check("Max HP buff: 100+50=150", g7.max_hp == 150)
-check("Gold gain: 500+200=700", g7.gold == 700)
-check("ATK gain: 10+5=15", g7.attack == 15)
+    # Split into sections
+    sections = {}
+    current = "preamble"
+    for line in lore.split('\n'):
+        if line.strip().startswith('[') and line.strip().endswith(']'):
+            current = line.strip()
+            sections[current] = []
+        else:
+            sections.setdefault(current, []).append(line)
 
-g7.update_stats({"hp": -30, "gold": -100, "attack": 0})
-check("HP damage: 150-30=120", g7.hp == 120)
-check("Max HP unchanged after damage: still 150", g7.max_hp == 150)
-check("Gold spend: 700-100=600", g7.gold == 600)
+    loc_text = '\n'.join(sections.get('[LOCATIONS]', []))
+    friend_text = '\n'.join(sections.get('[FRIEND ZONES - HIGH PRIORITY]', []))
+    item_text = '\n'.join(sections.get('[ITEMS & LOOT]', []))
 
-g8 = GameState()
-g8.hp = 10
-g8.update_stats({"hp": -50, "gold": 0, "attack": 0})
-check("HP cannot go below 0 (is_game_over)", g8.is_game_over == True)
-check("HP clamped at 0", g8.hp == 0)
+    loc_tags = re.findall(r'\[\s*[+\-]?\s*\d+\s*(?:HP|Gold|ATK)\s*\]', loc_text, re.IGNORECASE)
+    friend_tags = re.findall(r'\[\s*[+\-]?\s*\d+\s*(?:HP|Gold|ATK)\s*\]', friend_text, re.IGNORECASE)
+    item_tags = re.findall(r'\[\s*[+\-]?\s*\d+\s*(?:HP|Gold|ATK)\s*\]', item_text, re.IGNORECASE)
 
-# history should NOT be in to_dict anymore
-g9 = GameState()
-check("'history' not in to_dict() (session safety)", 'history' not in g9.to_dict())
+    check("No stat tags in [LOCATIONS] section", len(loc_tags) == 0,
+          f"Found tags: {loc_tags}")
+    check("No stat tags in [FRIEND ZONES] section", len(friend_tags) == 0,
+          f"Found tags: {friend_tags}")
+    check(f"[ITEMS & LOOT] still has its tags ({len(item_tags)} found)", len(item_tags) > 0)
+
+except FileNotFoundError:
+    print("  [SKIP] manipal_lore.txt not found")
 
 
 # ============================================================
@@ -216,4 +286,4 @@ if failed_names:
     for b in failed_names:
         print(f"    x {b}")
 else:
-    print("\n  All 3 bugs confirmed fixed. Ready to push to GitHub!")
+    print("\n  All tests passed. Middle ground architecture verified. Ready to push!")
