@@ -34,8 +34,9 @@
 35. Woodwinds (Shivansh's Home): [+800 Gold] [+50 HP] [+20 ATK] Premium apartment buffs.
 36. E503 (Mihika's Room): [+800 Gold] [+50 HP] [+20 ATK] High aesthetic value.
 37. B601 (Ramya, Kota's Room): [+800 Gold] [+50 HP] [+20 ATK] Cooperative living bonuses.
-38. Babas Point: [+20 HP] Scenic, quiet place. Restores sanity.
-39. Petrol Pump: [+20 HP] Late-night tea zone. Restores stamina.
+38. C904 (Reva, Anshu, Disha, Adel's Room): [+800 Gold] [+50 HP] [+20 ATK] Cozy group zone.
+39. Babas Point: [+20 HP] Scenic, quiet place. Restores sanity.
+40. Petrol Pump: [+20 HP] Late-night tea zone. Restores stamina.
 
 [ENEMIES & BOSSES]
 1.  The Auto Rickshaw Driver: Fast, aggressive.

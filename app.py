@@ -3,8 +3,8 @@ import json
 import re
 import random
 from flask import Flask, render_template, request, jsonify, session
-from flask_session import Session
-from groq import Groq
+# Removed flask_session for client-side cookies compatibility in serverless environments
+import google.generativeai as genai
 from dotenv import load_dotenv
 from engine import GameState
 
@@ -13,16 +13,19 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = "SUPER_SECRET_KEY"
 
-app.config["SESSION_PERMANENT"] = False
-app.config["SESSION_TYPE"] = "filesystem"
-Session(app)
+# Using standard client-side signed cookies for sessions to support Vercel serverless deployment
+app.config["SESSION_PERMANENT"] = True
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+# --- GEMINI CONFIGURATION ---
+# Make sure your .env file has GEMINI_API_KEY instead of GROQ_API_KEY
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # --- DATA LOADING ---
 ALL_ITEMS = []
 try:
-    with open('manipal_lore.txt', 'r', encoding='utf-8') as f:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    LORE_PATH = os.path.join(BASE_DIR, 'manipal_lore.txt')
+    with open(LORE_PATH, 'r', encoding='utf-8') as f:
         CAMPUS_DATA = f.read()
     if "[ITEMS & LOOT]" in CAMPUS_DATA:
         item_section = CAMPUS_DATA.split("[ITEMS & LOOT]")[1].split("[EVENTS]")[0]
@@ -44,6 +47,7 @@ FRIEND_ZONES_LIST = [
     "Woodwinds (Shivansh's Home) - Premium apartment buffs",
     "E503 (Mihika's Room) - High aesthetic value",
     "B601 (Ramya's Room) - Cooperative living bonuses",
+    "C904 (Reva, Anshu, Disha, Adel's Room) - Cozy group zone",
     "Babas Point - Scenic, quiet place",
     "Petrol Pump - Late-night tea zone"
 ]
@@ -185,8 +189,8 @@ def action():
     game.update_stats(button_stats)
     
     # --- RUNE TRIGGER (Every 10 Turns) ---
-    if game.turn % 10 == 0:
-        rune_options = random.sample(RUNES_LIST, 3)
+    if game.turn % 10 == 9:
+        rune_options = random.sample(RUNES_LIST, 2)
         session['awaiting_rune'] = True 
         special_message = f"✨ LEVEL {game.turn} REACHED! ✨\nAncient Manipal Runes appear before you. Choose wisely."
         session['current_options'] = rune_options
@@ -216,17 +220,43 @@ def action():
     {special_instruction}
     """
     
+    # Append user choice to history first
     game.history.append({"role": "user", "content": turn_context})
 
     try:
-        chat_completion = client.chat.completions.create(
-            messages=game.history,
-            model="llama-3.1-8b-instant",
-            temperature=1.0, 
-            response_format={"type": "json_object"} 
+        # --- CONVERT HISTORY FOR GEMINI ---
+        gemini_history = []
+        # We process all history items EXCEPT the last one (which is the current message we want to send)
+        # We also skip the system prompt in the history list, as it's passed in the constructor
+        for msg in game.history[:-1]:
+            if msg["role"] == "system":
+                continue
+            
+            # Map OpenAI roles to Gemini roles
+            role = "user" if msg["role"] == "user" else "model"
+            gemini_history.append({
+                "role": role,
+                "parts": [msg["content"]]
+            })
+
+        # Initialize Model with System Prompt
+        model = genai.GenerativeModel(
+            model_name="gemini-3-flash-preview", 
+            system_instruction=SYSTEM_PROMPT
         )
         
-        response_text = chat_completion.choices[0].message.content
+        # Start Chat Session
+        chat = model.start_chat(history=gemini_history)
+        
+        # Send Message
+        response = chat.send_message(
+            turn_context,
+            generation_config=genai.GenerationConfig(
+                response_mime_type="application/json"
+            )
+        )
+        
+        response_text = response.text
         clean_text = clean_json(response_text)
         ai_data = json.loads(clean_text)
         
@@ -248,7 +278,7 @@ def action():
     except Exception as e:
         print(f"AI Error: {e}")
         return jsonify({
-            "message": "Connection Error.", 
+            "message": "Connection Error (Gemini).", 
             "stats": game.to_dict(),
             "options": session.get('current_options', [])
         })
