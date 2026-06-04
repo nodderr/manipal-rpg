@@ -18,12 +18,20 @@ app.config["SESSION_PERMANENT"] = True
 # --- GROQ CONFIGURATION ---
 # Get your free API key at: https://console.groq.com
 # Add GROQ_API_KEY to your .env file or Vercel environment variables.
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
-# Model options (pick one):
-#   "llama-3.3-70b-versatile"  — Best story quality, 1000 req/day free
-#   "llama3-8b-8192"           — Fastest + highest daily limit (14400 req/day), slightly simpler output
 GROQ_MODEL = "llama-3.3-70b-versatile"
+
+# Groq — free, ultra-fast (~0.3s), uses Llama models
+# Initialized lazily to prevent startup crash if GROQ_API_KEY is missing
+_groq_client = None
+
+def get_groq_client():
+    global _groq_client
+    if _groq_client is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ValueError("GROQ_API_KEY environment variable is not set on the server.")
+        _groq_client = Groq(api_key=api_key)
+    return _groq_client
 
 # --- DATA LOADING ---
 ALL_ITEMS = []
@@ -271,7 +279,8 @@ def action():
     messages.append({"role": "user", "content": turn_context})
 
     try:
-        response = groq_client.chat.completions.create(
+        client = get_groq_client()
+        response = client.chat.completions.create(
             model=GROQ_MODEL,
             messages=messages,
             response_format={"type": "json_object"},  # Groq's JSON mode
@@ -305,9 +314,10 @@ def action():
         })
 
     except Exception as e:
+        error_msg = f"Connection Error (Groq): {str(e)}"
         print(f"AI Error: {e}")
         return jsonify({
-            "message": "Connection Error (Groq).",
+            "message": error_msg,
             "stats": game.to_dict(),
             "options": session.get('current_options', [])
         })

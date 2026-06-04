@@ -16,12 +16,27 @@ app.config["SESSION_PERMANENT"] = True
 
 # --- AI PROVIDER CONFIGURATION ---
 # Gemini (Google AI Studio) — free, reliable, 1-3s response time
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+else:
+    print("WARNING: GEMINI_API_KEY is not set.")
 
-# Groq — free, ultra-fast (~0.3s), uses Llama models
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 GROQ_MODEL = "llama-3.3-70b-versatile"
 GEMINI_MODEL = "gemini-3-flash-preview"
+
+# Groq — free, ultra-fast (~0.3s), uses Llama models
+# Initialized lazily to prevent startup crash if GROQ_API_KEY is missing
+_groq_client = None
+
+def get_groq_client():
+    global _groq_client
+    if _groq_client is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ValueError("GROQ_API_KEY environment variable is not set on the server.")
+        _groq_client = Groq(api_key=api_key)
+    return _groq_client
 
 # --- DATA LOADING ---
 ALL_ITEMS = []
@@ -191,7 +206,8 @@ def call_groq(short_history, turn_context):
         messages.append({"role": groq_role, "content": msg["parts"][0]})
     messages.append({"role": "user", "content": turn_context})
 
-    response = groq_client.chat.completions.create(
+    client = get_groq_client()
+    response = client.chat.completions.create(
         model=GROQ_MODEL,
         messages=messages,
         response_format={"type": "json_object"},
@@ -345,9 +361,10 @@ def action():
 
     except Exception as e:
         provider = session.get('provider', 'gemini')
+        error_msg = f"Connection Error ({provider.capitalize()}): {str(e)}"
         print(f"AI Error ({provider}): {e}")
         return jsonify({
-            "message": f"Connection Error ({provider.capitalize()}).",
+            "message": error_msg,
             "stats": game.to_dict(),
             "options": session.get('current_options', [])
         })
