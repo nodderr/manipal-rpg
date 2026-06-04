@@ -18,7 +18,7 @@ app.config["SESSION_PERMANENT"] = True
 # --- GROQ CONFIGURATION ---
 # Get your free API key at: https://console.groq.com
 # Add GROQ_API_KEY to your .env file or Vercel environment variables.
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 # Groq — free, ultra-fast (~0.3s), uses Llama models
 # Initialized lazily to prevent startup crash if GROQ_API_KEY is missing
@@ -280,13 +280,30 @@ def action():
 
     try:
         client = get_groq_client()
-        response = client.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=messages,
-            response_format={"type": "json_object"},  # Groq's JSON mode
-            temperature=0.8,  # Slightly creative for RPG storytelling
-            max_tokens=1024,
-        )
+        try:
+            response = client.chat.completions.create(
+                model=GROQ_MODEL,
+                messages=messages,
+                response_format={"type": "json_object"},  # Groq's JSON mode
+                temperature=0.8,  # Slightly creative for RPG storytelling
+                max_tokens=1024,
+            )
+        except Exception as e:
+            # Check if the error is due to model permissions/availability/block
+            # If so, retry with the widely-available Llama 3.1 8B model
+            err_str = str(e).lower()
+            if any(keyword in err_str for keyword in ["model", "permission", "block", "not found", "403", "400"]):
+                fallback_model = "llama-3.1-8b-instant"
+                print(f"Groq primary model ({GROQ_MODEL}) failed: {e}. Trying fallback model: {fallback_model}")
+                response = client.chat.completions.create(
+                    model=fallback_model,
+                    messages=messages,
+                    response_format={"type": "json_object"},
+                    temperature=0.8,
+                    max_tokens=1024,
+                )
+            else:
+                raise e
 
         response_text = response.choices[0].message.content
         ai_data = json.loads(response_text)
