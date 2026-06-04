@@ -10,19 +10,19 @@ class GameState:
         self.attack = 10
         self.inventory = []
         self.runes = []
-        self.history = []
+        # history is no longer stored in GameState — managed separately in app.py
+        # to keep session cookie under the 4KB Flask limit.
         self.is_game_over = False
     
     def to_dict(self):
         return {
             "turn": self.turn,
             "hp": self.hp,
-            "max_hp": self.max_hp, # Important: Save this to session
+            "max_hp": self.max_hp,
             "gold": self.gold,
             "attack": self.attack,
             "inventory": self.inventory,
             "runes": self.runes,
-            "history": self.history,
             "is_game_over": self.is_game_over
         }
 
@@ -60,6 +60,8 @@ class GameState:
             self.is_game_over = True
             return
 
-        self.turn += 1
+        # NOTE: turn is no longer incremented here.
+        # It is incremented exactly once per player action in app.py,
+        # after a successful AI response. This prevents double-increments.
         if self.turn > self.max_turns:
             self.is_game_over = True
