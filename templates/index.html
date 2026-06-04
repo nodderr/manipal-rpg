@@ -2,358 +2,214 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manipal RPG</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700&display=swap');
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            background-color: #0d0d0d;
-            color: #00ff00;
-            font-family: 'Share Tech Mono', monospace;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        /* ─── PROVIDER SELECTION SCREEN ─── */
-        #provider-screen {
+        body { 
+            background-color: #1a1a1a; 
+            color: #00ff00; 
+            font-family: 'Courier New', monospace; 
+            padding: 20px; 
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            gap: 40px;
-            padding: 40px;
-            background: radial-gradient(ellipse at center, #0d1f0d 0%, #0d0d0d 70%);
-        }
-
-        .title-block {
-            text-align: center;
-        }
-
-        .title-block h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: clamp(2rem, 5vw, 3.5rem);
-            color: #00ff00;
-            text-shadow: 0 0 20px #00ff0088, 0 0 40px #00ff0044;
-            letter-spacing: 4px;
-            margin-bottom: 10px;
-        }
-
-        .title-block p {
-            color: #44aa44;
-            font-size: 1rem;
-            letter-spacing: 2px;
-        }
-
-        .divider {
-            width: 300px;
-            height: 1px;
-            background: linear-gradient(to right, transparent, #00ff00, transparent);
-            opacity: 0.5;
-        }
-
-        .oracle-prompt {
-            font-size: 1.1rem;
-            color: #88cc88;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        .provider-cards {
-            display: flex;
-            gap: 30px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .provider-card {
-            background: #0a0a0a;
-            border: 2px solid #1a3a1a;
-            padding: 30px 40px;
-            cursor: pointer;
-            transition: all 0.25s ease;
-            text-align: center;
-            min-width: 240px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .provider-card::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            opacity: 0;
-            transition: opacity 0.25s ease;
-        }
-
-        .provider-card.gemini::before {
-            background: radial-gradient(ellipse at center, #003300 0%, transparent 70%);
-        }
-
-        .provider-card.groq::before {
-            background: radial-gradient(ellipse at center, #001133 0%, transparent 70%);
-        }
-
-        .provider-card:hover::before { opacity: 1; }
-
-        .provider-card.gemini { border-color: #1a3a1a; }
-        .provider-card.groq   { border-color: #1a1a3a; }
-
-        .provider-card.gemini:hover {
-            border-color: #00ff00;
-            box-shadow: 0 0 30px #00ff0033, 0 0 60px #00ff0011;
-        }
-
-        .provider-card.groq:hover {
-            border-color: #4488ff;
-            box-shadow: 0 0 30px #4488ff33, 0 0 60px #4488ff11;
-            color: #4488ff;
-        }
-
-        .provider-card .icon {
-            font-size: 2.5rem;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        .provider-card .name {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.3rem;
-            letter-spacing: 3px;
-            margin-bottom: 10px;
-        }
-
-        .provider-card.groq .name { color: #4488ff; }
-        .provider-card.gemini .name { color: #00ff00; }
-
-        .provider-card .tagline {
-            font-size: 0.75rem;
-            opacity: 0.6;
-            letter-spacing: 1px;
-            line-height: 1.6;
-        }
-
-        .provider-card .badge {
-            display: inline-block;
-            margin-top: 14px;
-            padding: 3px 10px;
-            font-size: 0.65rem;
-            letter-spacing: 2px;
-            border: 1px solid currentColor;
-            opacity: 0.7;
-        }
-
-        .provider-card.gemini .badge { color: #00ff00; border-color: #00ff0066; }
-        .provider-card.groq   .badge { color: #4488ff; border-color: #4488ff66; }
-
-        .footer-note {
-            font-size: 0.7rem;
-            color: #2a4a2a;
-            letter-spacing: 1px;
-        }
-
-        /* ─── GAME SCREEN ─── */
-        #game-screen {
-            display: none;
-            padding: 20px;
             gap: 20px;
-            flex-direction: row;
         }
 
-        #game-screen.active {
-            display: flex;
-        }
-
-        .game-container {
+        /* Main Game Area */
+        .game-container { 
             flex: 3;
-            max-width: 900px;
-            border: 2px solid #00ff00;
-            padding: 30px;
+            max-width: 900px; 
+            border: 3px solid #00ff00; 
+            padding: 30px; 
         }
 
+        /* Right Sidebar for Runes */
         .sidebar {
             flex: 1;
-            border: 2px solid #00ff44;
+            border: 3px solid #00ff44;
             padding: 20px;
             height: fit-content;
         }
 
-        .stats-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #00ff44;
-            padding-bottom: 15px;
-            margin-bottom: 30px;
-            font-size: 1.1rem;
+        .stats-bar { 
+            display: flex; 
+            justify-content: space-between; 
+            border-bottom: 2px solid #00ff44; 
+            padding-bottom: 15px; 
+            margin-bottom: 30px; 
+            font-size: 1.2rem; 
             font-weight: bold;
-            flex-wrap: wrap;
-            gap: 8px;
         }
-
-        .provider-badge {
-            font-size: 0.7rem;
-            padding: 3px 10px;
-            border: 1px solid;
-            letter-spacing: 2px;
-            opacity: 0.8;
+        
+        .story-text { 
+            font-size: 1.6rem; 
+            min-height: 225px; 
+            margin-bottom: 30px; 
+            line-height: 1.6; 
         }
-
-        .provider-badge.gemini { color: #00ff00; border-color: #00ff0066; }
-        .provider-badge.groq   { color: #4488ff; border-color: #4488ff66; }
-
-        .story-text {
-            font-size: 1.5rem;
-            min-height: 200px;
-            margin-bottom: 30px;
-            line-height: 1.7;
+        
+        .choices { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 20px; 
         }
-
-        .choices {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
+        
         button {
-            background: black;
-            color: #00ff00;
-            border: 2px solid #00ff00;
-            padding: 18px;
-            font-family: 'Share Tech Mono', monospace;
-            cursor: pointer;
-            font-size: 1.1rem;
+            background: black; 
+            color: #00ff00; 
+            border: 2px solid #00ff00; 
+            padding: 20px; 
+            font-family: inherit; 
+            cursor: pointer; 
+            font-size: 1.3rem; 
             transition: 0.2s;
-            text-align: left;
-            line-height: 1.4;
         }
-
-        button:hover {
-            background: #00ff00;
-            color: black;
+        button:hover { 
+            background: #00ff00; 
+            color: black; 
         }
-
         button:disabled {
-            border-color: #333;
-            color: #333;
+            border-color: #555;
+            color: #555;
             cursor: not-allowed;
-            background: black;
         }
 
         .rune-item {
             border: 1px solid #eebb00;
             color: #eebb00;
-            padding: 8px 10px;
-            margin-bottom: 8px;
-            font-size: 0.85rem;
-            line-height: 1.4;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
         }
-
-        h3 { margin-top: 0; color: #eebb00; margin-bottom: 15px; letter-spacing: 2px; }
-
         .watermark {
             position: fixed;
             bottom: 10px;
             left: 0;
             width: 100%;
             text-align: center;
-            color: #2a3a2a;
-            font-size: 0.8rem;
+            color: #555f66;
+            font-size: 0.9rem;
+            font-family: 'Courier New', Courier, monospace; 
             pointer-events: none;
             z-index: 1000;
+        }
+
+        h3 { margin-top: 0; color: #eebb00; }
+
+        /* ── Provider Selection Overlay ── */
+        #provider-screen {
+            position: fixed;
+            inset: 0;
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            z-index: 999;
+        }
+
+        #provider-screen h2 {
+            font-size: 1.8rem;
+            color: #00ff00;
             letter-spacing: 2px;
         }
 
-        /* Scanline overlay */
-        body::after {
-            content: '';
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 2px,
-                rgba(0,0,0,0.05) 2px,
-                rgba(0,0,0,0.05) 4px
-            );
-            z-index: 9999;
+        #provider-screen p {
+            color: #555f66;
+            font-size: 1rem;
+        }
+
+        .provider-buttons {
+            display: flex;
+            gap: 30px;
+        }
+
+        .provider-btn {
+            background: black;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            padding: 25px 40px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: 0.2s;
+            text-align: center;
+            min-width: 200px;
+        }
+
+        .provider-btn.groq {
+            color: #4488ff;
+            border-color: #4488ff;
+        }
+
+        .provider-btn:hover { background: #00ff00; color: black; }
+        .provider-btn.groq:hover { background: #4488ff; color: black; }
+
+        .provider-btn small {
+            display: block;
+            margin-top: 8px;
+            font-size: 0.75rem;
+            opacity: 0.6;
+        }
+
+        #provider-indicator {
+            font-size: 0.85rem;
+            padding: 2px 8px;
+            border: 1px solid #00ff0055;
+            color: #00cc00;
+        }
+
+        #provider-indicator.groq {
+            color: #4488ff;
+            border-color: #4488ff55;
         }
     </style>
 </head>
 <body>
 
-<!-- ─── PROVIDER SELECTION SCREEN ─── -->
+<!-- Provider Selection Overlay -->
 <div id="provider-screen">
-    <div class="title-block">
-        <h1>MANIPAL RPG</h1>
-        <p>A Surreal Campus Adventure</p>
+    <h2>MANIPAL RPG</h2>
+    <p>Choose your AI Oracle before the semester begins.</p>
+    <div class="provider-buttons">
+        <button class="provider-btn" onclick="startGame('gemini')">
+            GEMINI
+            <small>Google AI · Reliable</small>
+        </button>
+        <button class="provider-btn groq" onclick="startGame('groq')">
+            GROQ ⚡
+            <small>Llama 3.3 · Ultra-fast</small>
+        </button>
     </div>
-
-    <div class="divider"></div>
-
-    <div class="oracle-prompt">Choose your Oracle</div>
-
-    <div class="provider-cards">
-        <div class="provider-card gemini" id="btn-gemini" onclick="startGame('gemini')">
-            <span class="icon">✦</span>
-            <div class="name">GEMINI</div>
-            <div class="tagline">The Gemini Seer.<br>Reliable. Multimodal. Deep.</div>
-            <span class="badge">GOOGLE AI</span>
-        </div>
-
-        <div class="provider-card groq" id="btn-groq" onclick="startGame('groq')">
-            <span class="icon">⚡</span>
-            <div class="name">GROQ</div>
-            <div class="tagline">The Groq Warrior.<br>Ultra-fast. Raw power. Llama 3.3.</div>
-            <span class="badge">~0.3s RESPONSE</span>
-        </div>
-    </div>
-
-    <div class="footer-note">Both oracles are free. Your choice affects speed, not story.</div>
+    <p>Both are free. Choice affects speed, not story.</p>
 </div>
 
-<!-- ─── GAME SCREEN ─── -->
-<div id="game-screen">
-    <div class="game-container">
-        <div class="stats-bar">
-            <span id="turn">Turn: 1/50</span>
-            <span id="hp">HP: 100/100</span>
-            <span id="gold">Gold: 500</span>
-            <span id="attack">ATK: 10</span>
-            <span id="provider-indicator" class="provider-badge gemini">GEMINI</span>
-        </div>
-
-        <div class="story-text" id="story">
-            Initializing...
-        </div>
-
-        <div class="choices" id="choices">
-            <!-- Buttons inserted by JS -->
-        </div>
+<!-- Game UI (original) -->
+<div class="game-container">
+    <div class="stats-bar">
+        <span id="turn">Turn: 1/50</span>
+        <span id="hp">HP: 100/100</span>
+        <span id="gold">Gold: 500</span>
+        <span id="attack">ATK: 10</span>
+        <span id="provider-indicator">GEMINI</span>
     </div>
 
-    <div class="sidebar">
-        <h3>RUNES COLLECTED</h3>
-        <div id="rune-list"></div>
+    <div class="story-text" id="story">
+        Welcome to Manipal. The humidity is rising. Choose your Oracle.
+    </div>
+
+    <div class="choices" id="choices">
+        <!-- Filled after provider selection -->
     </div>
 </div>
 
-<div class="watermark">Made by Noddy :)</div>
+<div class="sidebar">
+    <h3>RUNES COLLECTED</h3>
+    <div id="rune-list"></div>
+</div>
 
 <script>
-    let currentProvider = 'gemini';
-
     async function startGame(provider) {
-        currentProvider = provider;
-
-        // Disable both cards while starting
-        document.getElementById('btn-gemini').style.pointerEvents = 'none';
-        document.getElementById('btn-groq').style.pointerEvents = 'none';
-        document.getElementById('btn-' + provider).style.opacity = '0.5';
+        document.getElementById('provider-screen').style.display = 'none';
 
         const response = await fetch('/start', {
             method: 'POST',
@@ -363,47 +219,35 @@
 
         const data = await response.json();
 
-        // Show provider badge
-        const badge = document.getElementById('provider-indicator');
-        if (provider === 'groq') {
-            badge.textContent = '⚡ GROQ';
-            badge.className = 'provider-badge groq';
-        } else {
-            badge.textContent = '✦ GEMINI';
-            badge.className = 'provider-badge gemini';
-        }
+        // Update provider indicator
+        const indicator = document.getElementById('provider-indicator');
+        indicator.textContent = provider === 'groq' ? 'GROQ ⚡' : 'GEMINI';
+        indicator.className = provider === 'groq' ? 'groq' : '';
 
-        // Update stats
         updateStats(data.stats);
 
-        // Transition screens
-        document.getElementById('provider-screen').style.display = 'none';
-        const gameScreen = document.getElementById('game-screen');
-        gameScreen.classList.add('active');
-
-        // Show initial choice
-        document.getElementById('story').innerText = 'The campus awaits. Your semester begins now.';
+        document.getElementById('story').innerText = 'Welcome to Manipal. The humidity is rising. Choose your path.';
         const choicesDiv = document.getElementById('choices');
         choicesDiv.innerHTML = '';
         const startBtn = document.createElement('button');
-        startBtn.innerText = 'Begin Semester';
+        startBtn.innerText = 'Start Game';
         startBtn.style.gridColumn = 'span 2';
         startBtn.onclick = () => makeChoice('Start Game');
         choicesDiv.appendChild(startBtn);
     }
 
     function updateStats(stats) {
-        try { document.getElementById('hp').innerText = `HP: ${stats.hp}/${stats.max_hp}`; } catch(e) {}
-        try { document.getElementById('gold').innerText = `Gold: ${stats.gold}`; } catch(e) {}
-        try { document.getElementById('attack').innerText = `ATK: ${stats.attack}`; } catch(e) {}
-        try { document.getElementById('turn').innerText = `Turn: ${stats.turn}/50`; } catch(e) {}
+        try { document.getElementById('hp').innerText = "HP: " + stats.hp + "/" + stats.max_hp; } catch(e) {}
+        try { document.getElementById('gold').innerText = "Gold: " + stats.gold; } catch(e) {}
+        try { document.getElementById('attack').innerText = "ATK: " + stats.attack; } catch(e) {}
+        try { document.getElementById('turn').innerText = "Turn: " + stats.turn + "/50"; } catch(e) {}
 
         const runeList = document.getElementById('rune-list');
         if (runeList && stats.runes) {
-            runeList.innerHTML = '';
+            runeList.innerHTML = "";
             stats.runes.forEach(rune => {
                 const rDiv = document.createElement('div');
-                rDiv.className = 'rune-item';
+                rDiv.className = "rune-item";
                 rDiv.innerText = rune;
                 runeList.appendChild(rDiv);
             });
@@ -413,7 +257,7 @@
     async function makeChoice(text) {
         const buttons = document.querySelectorAll('button');
         buttons.forEach(b => b.disabled = true);
-        document.getElementById('story').innerText = 'Thinking...';
+        document.getElementById('story').innerText = "Thinking...";
 
         try {
             const response = await fetch('/action', {
@@ -421,36 +265,37 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ choice: text })
             });
-
+            
             const data = await response.json();
+            
             document.getElementById('story').innerText = data.message;
 
-            if (data.stats) updateStats(data.stats);
+            if(data.stats) updateStats(data.stats);
 
             const choicesDiv = document.getElementById('choices');
-            choicesDiv.innerHTML = '';
+            choicesDiv.innerHTML = "";
 
             if (data.stats && (data.stats.is_game_over || data.stats.hp <= 0)) {
-                let endMessage = data.stats.hp <= 0 ? '💀 WASTED 💀' : '🏆 GRADUATED! 🏆';
-                let color = data.stats.hp <= 0 ? '#ff4444' : '#00ff00';
+                let endMessage = data.stats.hp <= 0 ? "💀 WASTED 💀" : "🏆 GRADUATED! 🏆";
+                let color = data.stats.hp <= 0 ? "#ff4444" : "#00ff00";
 
                 const endTitle = document.createElement('h2');
                 endTitle.innerText = endMessage;
                 endTitle.style.color = color;
-                endTitle.style.textAlign = 'center';
-                endTitle.style.gridColumn = 'span 2';
-                endTitle.style.padding = '20px';
+                endTitle.style.textAlign = "center";
+                endTitle.style.gridColumn = "span 2"; 
                 choicesDiv.appendChild(endTitle);
 
                 const restartBtn = document.createElement('button');
-                restartBtn.innerText = 'RESTART SEMESTER';
-                restartBtn.style.gridColumn = 'span 2';
+                restartBtn.innerText = "RESTART SEMESTER";
+                restartBtn.style.gridColumn = "span 2";
                 restartBtn.style.borderColor = color;
                 restartBtn.style.color = color;
-                restartBtn.onclick = () => window.location.reload();
+                restartBtn.onclick = () => window.location.reload(); 
                 choicesDiv.appendChild(restartBtn);
+
             } else {
-                if (data.options) {
+                if(data.options) {
                     data.options.forEach(option => {
                         const btn = document.createElement('button');
                         btn.innerText = option;
@@ -462,10 +307,11 @@
 
         } catch (error) {
             console.error(error);
-            document.getElementById('story').innerText = 'Connection Failed. Please Refresh.';
+            document.getElementById('story').innerText = "Connection Failed. Please Refresh.";
         }
     }
 </script>
 
+    <div class="watermark">Made by Noddy :)</div>
 </body>
 </html>
