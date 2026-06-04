@@ -30,13 +30,15 @@
         }
 
         .stats-bar { 
-            display: flex; 
-            justify-content: space-between; 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
+            gap: 12px; 
             border-bottom: 2px solid #00ff44; 
             padding-bottom: 15px; 
             margin-bottom: 30px; 
-            font-size: 1.2rem; 
+            font-size: 1.05rem; 
             font-weight: bold;
+            align-items: center;
         }
         
         .story-text { 
@@ -213,7 +215,12 @@
             padding: 15px;
             margin-bottom: 25px;
             background: black;
-            box-shadow: 0 0 10px rgba(255, 68, 68, 0.4);
+            box-shadow: 0 0 12px rgba(255, 68, 68, 0.4);
+            animation: bossPulse 1.5s infinite alternate ease-in-out;
+        }
+        @keyframes bossPulse {
+            from { box-shadow: 0 0 8px rgba(255, 68, 68, 0.3); border-color: #aa2222; }
+            to { box-shadow: 0 0 20px rgba(255, 68, 68, 0.8); border-color: #ff4444; }
         }
         #boss-name {
             color: #ff4444;
@@ -312,12 +319,12 @@
 <!-- Game UI (original) -->
 <div class="game-container">
     <div class="stats-bar">
-        <span id="turn">Turn: 1/50</span>
-        <span id="hp">HP: 100/100</span>
-        <span id="gold">Gold: 500</span>
-        <span id="attack">ATK: 10</span>
-        <span id="major-indicator">Major: None</span>
-        <span id="provider-indicator">GEMINI</span>
+        <span id="turn">⏳ Turn: 1/50</span>
+        <span id="hp">💖 [██████████] 100/100</span>
+        <span id="gold">🪙 Gold: 500</span>
+        <span id="attack">⚔️ ATK: 10</span>
+        <span id="major-indicator">🎓 Major: None</span>
+        <span id="provider-indicator">🔮 GEMINI</span>
     </div>
 
     <!-- Boss HP Bar (hidden by default) -->
@@ -388,7 +395,7 @@
 
                 selectedProvider = data.provider;
                 const providerInd = document.getElementById('provider-indicator');
-                providerInd.textContent = selectedProvider === 'groq' ? 'GROQ ⚡' : 'GEMINI';
+                providerInd.textContent = selectedProvider === 'groq' ? '🔮 GROQ ⚡' : '🔮 GEMINI';
                 providerInd.className = selectedProvider === 'groq' ? 'groq' : '';
 
                 const majorInd = document.getElementById('major-indicator');
@@ -466,7 +473,7 @@
         const data = await response.json();
 
         const providerInd = document.getElementById('provider-indicator');
-        providerInd.textContent = selectedProvider === 'groq' ? 'GROQ ⚡' : 'GEMINI';
+        providerInd.textContent = selectedProvider === 'groq' ? '🔮 GROQ ⚡' : '🔮 GEMINI';
         providerInd.className = selectedProvider === 'groq' ? 'groq' : '';
 
         const majorInd = document.getElementById('major-indicator');
@@ -495,13 +502,19 @@
     }
 
     function updateStats(stats) {
-        try { document.getElementById('hp').innerText = "HP: " + stats.hp + "/" + stats.max_hp; } catch(e) {}
-        try { document.getElementById('gold').innerText = "Gold: " + stats.gold; } catch(e) {}
-        try { document.getElementById('attack').innerText = "ATK: " + stats.attack; } catch(e) {}
-        try { document.getElementById('turn').innerText = "Turn: " + stats.turn + "/50"; } catch(e) {}
+        try {
+            if (stats.hp !== undefined && stats.max_hp !== undefined) {
+                const filledSegments = Math.max(0, Math.min(10, Math.round((stats.hp / stats.max_hp) * 10)));
+                const bar = "█".repeat(filledSegments) + "░".repeat(10 - filledSegments);
+                document.getElementById('hp').innerText = `💖 [${bar}] ${stats.hp}/${stats.max_hp}`;
+            }
+        } catch(e) {}
+        try { document.getElementById('gold').innerText = "🪙 Gold: " + stats.gold; } catch(e) {}
+        try { document.getElementById('attack').innerText = "⚔️ ATK: " + stats.attack; } catch(e) {}
+        try { document.getElementById('turn').innerText = "⏳ Turn: " + stats.turn + "/50"; } catch(e) {}
         try {
             if (stats.major) {
-                document.getElementById('major-indicator').innerText = stats.major;
+                document.getElementById('major-indicator').innerText = "🎓 " + stats.major;
             }
         } catch(e) {}
 
