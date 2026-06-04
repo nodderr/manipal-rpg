@@ -138,7 +138,7 @@
 
         .provider-btn.groq {
             color: #4488ff;
-            border-color: #4488ff;
+            border-color: #4488ff55;
         }
 
         .provider-btn:hover { background: #00ff00; color: black; }
@@ -162,6 +162,50 @@
             color: #4488ff;
             border-color: #4488ff55;
         }
+
+        /* --- Major Button Classes --- */
+        .major-btn {
+            background: black;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            padding: 15px 10px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: 0.2s;
+            text-align: center;
+        }
+        .major-btn:hover { background: #00ff00; color: black; }
+
+        .major-btn.cs { color: #00ff00; border-color: #00ff00; }
+        .major-btn.cs:hover { background: #00ff00; color: black; }
+
+        .major-btn.biomed { color: #ff88ff; border-color: #ff88ff; }
+        .major-btn.biomed:hover { background: #ff88ff; color: black; }
+
+        .major-btn.biotech { color: #00ffaa; border-color: #00ffaa; }
+        .major-btn.biotech:hover { background: #00ffaa; color: black; }
+
+        .major-btn.ece { color: #ffaa00; border-color: #ffaa00; }
+        .major-btn.ece:hover { background: #ffaa00; color: black; }
+
+        .major-btn.mech { color: #ff5555; border-color: #ff5555; }
+        .major-btn.mech:hover { background: #ff5555; color: black; }
+
+        .major-btn small {
+            display: block;
+            margin-top: 5px;
+            font-size: 0.75rem;
+            opacity: 0.8;
+            line-height: 1.3;
+        }
+        
+        #major-indicator {
+            font-size: 0.85rem;
+            padding: 2px 8px;
+            border: 1px solid #eebb0055;
+            color: #eebb00;
+        }
     </style>
 </head>
 <body>
@@ -169,18 +213,49 @@
 <!-- Provider Selection Overlay -->
 <div id="provider-screen">
     <h2>MANIPAL RPG</h2>
-    <p>Choose your AI Oracle before the semester begins.</p>
-    <div class="provider-buttons">
-        <button class="provider-btn" onclick="startGame('gemini')">
-            GEMINI
-            <small>Google AI · Reliable</small>
-        </button>
-        <button class="provider-btn groq" onclick="startGame('groq')">
-            GROQ ⚡
-            <small>Llama 3.3 · Ultra-fast</small>
-        </button>
+    
+    <!-- Step 1: Select Provider -->
+    <div id="step-provider" style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+        <p>Choose your AI Oracle before the semester begins.</p>
+        <div class="provider-buttons">
+            <button class="provider-btn" onclick="selectProvider('gemini')">
+                GEMINI
+                <small>Google AI · Reliable</small>
+            </button>
+            <button class="provider-btn groq" onclick="selectProvider('groq')">
+                GROQ ⚡
+                <small>Llama 3.3 · Ultra-fast</small>
+            </button>
+        </div>
+        <p>Both are free. Choice affects response speed, not the story.</p>
     </div>
-    <p>Both are free. Choice affects speed, not story.</p>
+    
+    <!-- Step 2: Select Major (hidden initially) -->
+    <div id="step-major" style="display: none; flex-direction: column; align-items: center; gap: 20px; max-width: 800px; padding: 0 20px;">
+        <p>Choose your Academic Major to determine starting stats & academic vibes.</p>
+        <div class="major-buttons" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%;">
+            <button class="major-btn cs" onclick="selectMajor('Computer Science')">
+                Computer Science
+                <small>ATK: 15 · HP: 100 · Gold: 500<br>Compiler bugs & caffeine</small>
+            </button>
+            <button class="major-btn biomed" onclick="selectMajor('BioMedical')">
+                BioMedical
+                <small>ATK: 10 · HP: 120 · Gold: 600<br>Medical devices & diagnostics</small>
+            </button>
+            <button class="major-btn biotech" onclick="selectMajor('BioTechnology')">
+                BioTechnology
+                <small>ATK: 12 · HP: 110 · Gold: 700<br>DNA models & biochemistry</small>
+            </button>
+            <button class="major-btn ece" onclick="selectMajor('Electronics and Communication')">
+                Electronics & Comm (ECE)
+                <small>ATK: 13 · HP: 100 · Gold: 900<br>Circuits & wireless signals</small>
+            </button>
+            <button class="major-btn mech" onclick="selectMajor('Mechanical')" style="grid-column: span 2;">
+                Mechanical
+                <small>ATK: 11 · HP: 115 · Gold: 800<br>Workshops, engines & tools</small>
+            </button>
+        </div>
+    </div>
 </div>
 
 <!-- Game UI (original) -->
@@ -190,6 +265,7 @@
         <span id="hp">HP: 100/100</span>
         <span id="gold">Gold: 500</span>
         <span id="attack">ATK: 10</span>
+        <span id="major-indicator">Major: None</span>
         <span id="provider-indicator">GEMINI</span>
     </div>
 
@@ -208,21 +284,34 @@
 </div>
 
 <script>
-    async function startGame(provider) {
+    let selectedProvider = null;
+
+    function selectProvider(provider) {
+        selectedProvider = provider;
+        document.getElementById('step-provider').style.display = 'none';
+        document.getElementById('step-major').style.display = 'flex';
+    }
+
+    async function selectMajor(major) {
         document.getElementById('provider-screen').style.display = 'none';
 
         const response = await fetch('/start', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ provider })
+            body: JSON.stringify({ provider: selectedProvider, major: major })
         });
 
         const data = await response.json();
 
-        // Update provider indicator
-        const indicator = document.getElementById('provider-indicator');
-        indicator.textContent = provider === 'groq' ? 'GROQ ⚡' : 'GEMINI';
-        indicator.className = provider === 'groq' ? 'groq' : '';
+        // Update provider and major indicators
+        const providerInd = document.getElementById('provider-indicator');
+        providerInd.textContent = selectedProvider === 'groq' ? 'GROQ ⚡' : 'GEMINI';
+        providerInd.className = selectedProvider === 'groq' ? 'groq' : '';
+
+        const majorInd = document.getElementById('major-indicator');
+        if (majorInd) {
+            majorInd.textContent = data.major;
+        }
 
         updateStats(data.stats);
 
@@ -241,6 +330,11 @@
         try { document.getElementById('gold').innerText = "Gold: " + stats.gold; } catch(e) {}
         try { document.getElementById('attack').innerText = "ATK: " + stats.attack; } catch(e) {}
         try { document.getElementById('turn').innerText = "Turn: " + stats.turn + "/50"; } catch(e) {}
+        try {
+            if (stats.major) {
+                document.getElementById('major-indicator').innerText = stats.major;
+            }
+        } catch(e) {}
 
         const runeList = document.getElementById('rune-list');
         if (runeList && stats.runes) {

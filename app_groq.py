@@ -18,7 +18,7 @@ app.config["SESSION_PERMANENT"] = True
 # --- GROQ CONFIGURATION ---
 # Get your free API key at: https://console.groq.com
 # Add GROQ_API_KEY to your .env file or Vercel environment variables.
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = "llama-3.3-70b-versatile"
 
 # Groq — free, ultra-fast (~0.3s), uses Llama models
 # Initialized lazily to prevent startup crash if GROQ_API_KEY is missing
@@ -113,6 +113,7 @@ RULES:
 1. Game ends Turn 50.
 2. Every 10th Turn is a BOSS FIGHT.
 3. Provide exactly 4 distinct options.
+4. **MAJOR INFLUENCE**: Weave the player's academic Major (e.g., Computer Science, BioMedical, BioTechnology, Electronics and Communication, Mechanical) into the story narrative. For example, a CS student might face compiler errors or bad WiFi; BioMedical students face hospital/medical equipment issues; BioTechnology students face genetics/lab research scenarios; ECE students deal with circuit boards, microcontrollers, and wireless signals; Mechanical students deal with engines, workshops, and heavy tools.
 
 *** CRITICAL STAT RULES ***
 1. **OPTIONS MUST HAVE TAGS**: You MUST include tags in square brackets for any stat change.
@@ -166,18 +167,57 @@ def load_game_from_session(data):
     game.gold = data['gold']
     game.attack = data.get('attack', 10)
     game.runes = data.get('runes', [])
+    game.major = data.get('major', 'Undeclared')
     return game
 
 
 @app.route('/')
 def home():
+    """Landing page — player chooses their AI provider and Major."""
+    return render_template('index.html')
+
+
+@app.route('/start', methods=['POST'])
+def start():
+    """Initialize a new game with the chosen AI provider and Major (Groq-only app)."""
+    provider = request.json.get('provider', 'groq')
+    major = request.json.get('major', 'Computer Science')
+    
+    if provider not in ('gemini', 'groq'):
+        provider = 'groq'
+        
+    valid_majors = {
+        'Computer Science':                  {"hp": 100, "max_hp": 100, "attack": 15, "gold": 500},
+        'BioMedical':                        {"hp": 120, "max_hp": 120, "attack": 10, "gold": 600},
+        'BioTechnology':                     {"hp": 110, "max_hp": 110, "attack": 12, "gold": 700},
+        'Electronics and Communication':    {"hp": 100, "max_hp": 100, "attack": 13, "gold": 900},
+        'Mechanical':                        {"hp": 115, "max_hp": 115, "attack": 11, "gold": 800}
+    }
+    
+    if major not in valid_majors:
+        major = 'Computer Science'
+        
+    stats = valid_majors[major]
+    
     new_game = GameState()
-    new_game.gold = 500
+    new_game.major = major
+    new_game.hp = stats["hp"]
+    new_game.max_hp = stats["max_hp"]
+    new_game.attack = stats["attack"]
+    new_game.gold = stats["gold"]
+
+    session['provider'] = 'groq'
+    session['major'] = major
     session['current_options'] = ["Start Adventure", "Check Inventory", "Rest", "Explore"]
     session['awaiting_rune'] = False
     session['short_history'] = []
     session['game_state'] = new_game.to_dict()
-    return render_template('index.html', stats=new_game.to_dict())
+
+    return jsonify({
+        "stats": new_game.to_dict(),
+        "provider": 'groq',
+        "major": major
+    })
 
 @app.route('/action', methods=['POST'])
 def action():
@@ -259,6 +299,7 @@ def action():
     HP: {game.hp}/{game.max_hp}
     Gold: {game.gold}
     Attack: {game.attack}
+    Major: {game.major}
     Choice: {user_choice}
     SUGGESTED LOOT: {suggested_loot}
     {special_instruction}
@@ -280,30 +321,13 @@ def action():
 
     try:
         client = get_groq_client()
-        try:
-            response = client.chat.completions.create(
-                model=GROQ_MODEL,
-                messages=messages,
-                response_format={"type": "json_object"},  # Groq's JSON mode
-                temperature=0.8,  # Slightly creative for RPG storytelling
-                max_tokens=1024,
-            )
-        except Exception as e:
-            # Check if the error is due to model permissions/availability/block
-            # If so, retry with the widely-available Llama 3.1 8B model
-            err_str = str(e).lower()
-            if any(keyword in err_str for keyword in ["model", "permission", "block", "not found", "403", "400"]):
-                fallback_model = "llama-3.1-8b-instant"
-                print(f"Groq primary model ({GROQ_MODEL}) failed: {e}. Trying fallback model: {fallback_model}")
-                response = client.chat.completions.create(
-                    model=fallback_model,
-                    messages=messages,
-                    response_format={"type": "json_object"},
-                    temperature=0.8,
-                    max_tokens=1024,
-                )
-            else:
-                raise e
+        response = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=messages,
+            response_format={"type": "json_object"},  # Groq's JSON mode
+            temperature=0.8,  # Slightly creative for RPG storytelling
+            max_tokens=1024,
+        )
 
         response_text = response.choices[0].message.content
         ai_data = json.loads(response_text)

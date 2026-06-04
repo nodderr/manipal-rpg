@@ -22,8 +22,8 @@ if GEMINI_API_KEY:
 else:
     print("WARNING: GEMINI_API_KEY is not set.")
 
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
+GROQ_MODEL = "llama-3.3-70b-versatile"
+GEMINI_MODEL = "gemini-3-flash-preview"
 
 # Groq — free, ultra-fast (~0.3s), uses Llama models
 # Initialized lazily to prevent startup crash if GROQ_API_KEY is missing
@@ -114,6 +114,7 @@ RULES:
 1. Game ends Turn 50.
 2. Every 10th Turn is a BOSS FIGHT.
 3. Provide exactly 4 distinct options.
+4. **MAJOR INFLUENCE**: Weave the player's academic Major (e.g., Computer Science, BioMedical, BioTechnology, Electronics and Communication, Mechanical) into the story narrative. For example, a CS student might face compiler errors or bad WiFi; BioMedical students face hospital/medical equipment issues; BioTechnology students face genetics/lab research scenarios; ECE students deal with circuit boards, microcontrollers, and wireless signals; Mechanical students deal with engines, workshops, and heavy tools.
 
 *** CRITICAL STAT RULES ***
 1. **OPTIONS MUST HAVE TAGS**: You MUST include tags in square brackets for any stat change.
@@ -169,6 +170,7 @@ def load_game_from_session(data):
     game.gold = data['gold']
     game.attack = data.get('attack', 10)
     game.runes = data.get('runes', [])
+    game.major = data.get('major', 'Undeclared')
     return game
 
 
@@ -207,31 +209,13 @@ def call_groq(short_history, turn_context):
     messages.append({"role": "user", "content": turn_context})
 
     client = get_groq_client()
-    try:
-        response = client.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=messages,
-            response_format={"type": "json_object"},
-            temperature=0.8,
-            max_tokens=1024,
-        )
-    except Exception as e:
-        # Check if the error is due to model permissions/availability/block
-        # If so, retry with the widely-available Llama 3.1 8B model
-        err_str = str(e).lower()
-        if any(keyword in err_str for keyword in ["model", "permission", "block", "not found", "403", "400"]):
-            fallback_model = "llama-3.1-8b-instant"
-            print(f"Groq primary model ({GROQ_MODEL}) failed: {e}. Trying fallback model: {fallback_model}")
-            response = client.chat.completions.create(
-                model=fallback_model,
-                messages=messages,
-                response_format={"type": "json_object"},
-                temperature=0.8,
-                max_tokens=1024,
-            )
-        else:
-            raise e
-
+    response = client.chat.completions.create(
+        model=GROQ_MODEL,
+        messages=messages,
+        response_format={"type": "json_object"},
+        temperature=0.8,
+        max_tokens=1024,
+    )
     return json.loads(response.choices[0].message.content)
 
 
@@ -255,15 +239,35 @@ def home():
 
 @app.route('/start', methods=['POST'])
 def start():
-    """Initialize a new game with the chosen AI provider."""
+    """Initialize a new game with the chosen AI provider and Major."""
     provider = request.json.get('provider', 'gemini')
+    major = request.json.get('major', 'Computer Science')
+    
     if provider not in ('gemini', 'groq'):
         provider = 'gemini'
-
+        
+    valid_majors = {
+        'Computer Science':                  {"hp": 100, "max_hp": 100, "attack": 15, "gold": 500},
+        'BioMedical':                        {"hp": 120, "max_hp": 120, "attack": 10, "gold": 600},
+        'BioTechnology':                     {"hp": 110, "max_hp": 110, "attack": 12, "gold": 700},
+        'Electronics and Communication':    {"hp": 100, "max_hp": 100, "attack": 13, "gold": 900},
+        'Mechanical':                        {"hp": 115, "max_hp": 115, "attack": 11, "gold": 800}
+    }
+    
+    if major not in valid_majors:
+        major = 'Computer Science'
+        
+    stats = valid_majors[major]
+    
     new_game = GameState()
-    new_game.gold = 500
+    new_game.major = major
+    new_game.hp = stats["hp"]
+    new_game.max_hp = stats["max_hp"]
+    new_game.attack = stats["attack"]
+    new_game.gold = stats["gold"]
 
     session['provider'] = provider
+    session['major'] = major
     session['current_options'] = ["Start Adventure", "Check Inventory", "Rest", "Explore"]
     session['awaiting_rune'] = False
     session['short_history'] = []
@@ -271,7 +275,8 @@ def start():
 
     return jsonify({
         "stats": new_game.to_dict(),
-        "provider": provider
+        "provider": provider,
+        "major": major
     })
 
 
@@ -343,6 +348,7 @@ def action():
     HP: {game.hp}/{game.max_hp}
     Gold: {game.gold}
     Attack: {game.attack}
+    Major: {game.major}
     Choice: {user_choice}
     SUGGESTED LOOT: {get_random_items(3)}
     {special_instruction}

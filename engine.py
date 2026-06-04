@@ -10,6 +10,7 @@ class GameState:
         self.attack = 10
         self.inventory = []
         self.runes = []
+        self.major = "Undeclared"
         # history is no longer stored in GameState — managed separately in app.py
         # to keep session cookie under the 4KB Flask limit.
         self.is_game_over = False
@@ -23,6 +24,7 @@ class GameState:
             "attack": self.attack,
             "inventory": self.inventory,
             "runes": self.runes,
+            "major": self.major,
             "is_game_over": self.is_game_over
         }
 

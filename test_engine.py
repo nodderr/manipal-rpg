@@ -123,6 +123,9 @@ check("Returns a copy — mutating it doesn't affect LOCATION_STATS",
 section("2. Button Stats — Player Choice Applied Correctly")
 
 g = GameState()
+check("GameState default major is 'Undeclared'", g.major == "Undeclared")
+check("GameState dict contains 'major'", "major" in g.to_dict())
+check("GameState serialized major is correct", g.to_dict()["major"] == "Undeclared")
 g.gold = 500; g.hp = 100; g.max_hp = 100; g.attack = 10
 
 # Player clicks "Eat Puff [+20 HP] [-20 Gold]"
