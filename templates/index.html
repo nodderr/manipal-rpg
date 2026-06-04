@@ -41,63 +41,9 @@
         
         .story-text { 
             font-size: 1.6rem; 
-            height: 380px; 
-            overflow-y: auto;
+            min-height: 225px; 
             margin-bottom: 30px; 
-            line-height: 1.6;
-            border: 1px solid #00ff0033;
-            padding: 15px;
-            background: #050505;
-            scroll-behavior: smooth;
-        }
-
-        /* --- Scrollbar Styling --- */
-        .story-text::-webkit-scrollbar {
-            width: 8px;
-        }
-        .story-text::-webkit-scrollbar-track {
-            background: #050505;
-        }
-        .story-text::-webkit-scrollbar-thumb {
-            background: #00ff0033;
-            border-radius: 4px;
-        }
-        .story-text::-webkit-scrollbar-thumb:hover {
-            background: #00ff0066;
-        }
-
-        /* --- Adventure Log Entry Blocks --- */
-        @keyframes slideInUp {
-            from {
-                opacity: 0;
-                transform: translateY(8px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .choice-block {
-            color: #eebb00;
-            margin-top: 20px;
-            margin-bottom: 8px;
-            font-weight: bold;
-            animation: slideInUp 0.25s ease-out forwards;
-        }
-
-        .story-block {
-            color: #00ff00;
-            margin-bottom: 15px;
-            white-space: pre-wrap;
-            animation: slideInUp 0.3s ease-out forwards;
-        }
-
-        .welcome-block {
-            color: #00ff00;
-            margin-bottom: 15px;
-            white-space: pre-wrap;
-            animation: slideInUp 0.3s ease-out forwards;
+            line-height: 1.6; 
         }
         
         .choices { 
@@ -423,53 +369,6 @@
         }
     }
 
-    function rebuildLog(data) {
-        const storyDiv = document.getElementById('story');
-        storyDiv.innerHTML = "";
-
-        const history = data.short_history || [];
-        if (history.length === 0) {
-            const block = document.createElement('div');
-            block.className = 'welcome-block';
-            block.innerText = data.message;
-            storyDiv.appendChild(block);
-            return;
-        }
-
-        for (let i = 0; i < history.length; i += 2) {
-            const userMsg = history[i];
-            const modelMsg = history[i + 1];
-
-            if (userMsg && userMsg.parts && userMsg.parts[0]) {
-                const partsStr = userMsg.parts[0];
-                const match = partsStr.match(/Choice:\s*(.*)/);
-                const choice = match ? match[1] : 'Action';
-                
-                const cBlock = document.createElement('div');
-                cBlock.className = 'choice-block';
-                cBlock.innerText = `> ${choice}`;
-                storyDiv.appendChild(cBlock);
-            }
-
-            if (modelMsg && modelMsg.parts && modelMsg.parts[0]) {
-                let storyText = modelMsg.parts[0];
-                try {
-                    const parsed = JSON.parse(storyText);
-                    if (parsed && parsed.story) {
-                        storyText = parsed.story;
-                    }
-                } catch (e) {}
-
-                const sBlock = document.createElement('div');
-                sBlock.className = 'story-block';
-                sBlock.innerText = storyText;
-                storyDiv.appendChild(sBlock);
-            }
-        }
-
-        storyDiv.scrollTop = storyDiv.scrollHeight;
-    }
-
     async function resumeGame() {
         const saved = localStorage.getItem('manipal_rpg_save');
         if (!saved) return;
@@ -500,7 +399,7 @@
                 shortHistory = data.short_history || [];
 
                 updateStats(data.stats);
-                rebuildLog(data);
+                document.getElementById('story').innerText = data.message;
 
                 const bossContainer = document.getElementById('boss-container');
                 if (data.boss && bossContainer) {
@@ -581,7 +480,7 @@
 
         const welcomeMsg = 'Welcome to Manipal. The humidity is rising. Choose your path.';
         const startOptions = ['Start Game'];
-        document.getElementById('story').innerHTML = `<div class="welcome-block">${welcomeMsg}</div>`;
+        document.getElementById('story').innerText = welcomeMsg;
         
         shortHistory = [];
         saveGame(data.stats, welcomeMsg, startOptions, selectedProvider, null, false);
@@ -629,21 +528,7 @@
 
         const buttons = document.querySelectorAll('button');
         buttons.forEach(b => b.disabled = true);
-
-        // Append player choice and temporary thinking indicator to adventure log
-        const storyDiv = document.getElementById('story');
-        const choiceBlock = document.createElement('div');
-        choiceBlock.className = 'choice-block';
-        choiceBlock.innerText = `> ${text}`;
-        storyDiv.appendChild(choiceBlock);
-
-        const thinkingBlock = document.createElement('div');
-        thinkingBlock.id = 'thinking-indicator';
-        thinkingBlock.className = 'story-block';
-        thinkingBlock.innerText = 'Thinking...';
-        storyDiv.appendChild(thinkingBlock);
-
-        storyDiv.scrollTop = storyDiv.scrollHeight;
+        document.getElementById('story').innerText = "Thinking...";
 
         try {
             const response = await fetch('/action', {
@@ -654,16 +539,7 @@
             
             const data = await response.json();
             
-            // Remove thinking indicator and append response story block
-            const thinking = document.getElementById('thinking-indicator');
-            if (thinking) thinking.remove();
-
-            const storyBlock = document.createElement('div');
-            storyBlock.className = 'story-block';
-            storyBlock.innerText = data.message;
-            storyDiv.appendChild(storyBlock);
-
-            storyDiv.scrollTop = storyDiv.scrollHeight;
+            document.getElementById('story').innerText = data.message;
 
             if(data.stats) updateStats(data.stats);
 
@@ -724,15 +600,7 @@
 
         } catch (error) {
             console.error(error);
-            const thinking = document.getElementById('thinking-indicator');
-            if (thinking) thinking.remove();
-
-            const errBlock = document.createElement('div');
-            errBlock.className = 'story-block';
-            errBlock.style.color = '#ff4444';
-            errBlock.innerText = "Connection Failed. Please Refresh.";
-            storyDiv.appendChild(errBlock);
-            storyDiv.scrollTop = storyDiv.scrollHeight;
+            document.getElementById('story').innerText = "Connection Failed. Please Refresh.";
         }
     }
 </script>
